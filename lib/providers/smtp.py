@@ -24,22 +24,24 @@ class SMTPProvider:
         self.tls = tls
 
     def is_enabled(self):
-        return self.enabled
+        return self.enabled and self.host and self.receiver
 
-    def send(self, message, title="Hetzner Backup"):
-        if not self.host or not self.receiver:
-            print("SMTP not properly configured")
+    def send(self, message, title="Notification"):
+        if not self.is_enabled():
             return
 
-        msg = MIMEText(message)
-        msg['Subject'] = title
-        msg['From'] = self.sender
-        msg['To'] = self.receiver
-
         try:
-            with smtplib.SMTP(self.host, self.port) as server:
+            msg = MIMEText(message)
+            msg['Subject'] = title
+            msg['From'] = self.sender or self.user
+            msg['To'] = self.receiver
+
+            with smtplib.SMTP(self.host, self.port, timeout=10) as server:
+                server.ehlo()
+
                 if self.tls:
                     server.starttls()
+                    server.ehlo()
 
                 if self.user and self.password:
                     server.login(self.user, self.password)
@@ -47,4 +49,4 @@ class SMTPProvider:
                 server.send_message(msg)
 
         except Exception as e:
-            print(f"SMTP error: {e}")
+            print(f"[smtp] Error sending notification: {e}")
