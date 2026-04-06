@@ -306,4 +306,4 @@ if __name__ == "__main__":
             time.sleep(1)
 
     else:
-        print("Standalone mode not shown here")
+        Console.error("Can not run standalone either.")
