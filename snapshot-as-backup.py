@@ -48,6 +48,8 @@ def notification_worker():
 
 def async_notify(title, message):
     if notifier:
+        ts = time.strftime("%Y-%m-%d %H:%M:%S")
+        print(f"[{ts}] [NOTIFY] {title}\n{message}", flush=True)
         notification_queue.put((title, message))
 
 
