@@ -20,6 +20,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 USER app
 
 COPY snapshot-as-backup.py README.md LICENSE ./
+COPY lib ./lib
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
