@@ -7,6 +7,10 @@ import time
 import requests
 from cron_validator import CronScheduler
 
+from lib.providers.notifications import NotificationManager
+from lib.providers.ntfy import NtfyProvider
+from lib.providers.smtp import SMTPProvider
+
 base_url = "https://api.hetzner.cloud/v1"
 api_token = ""
 snapshot_name = ""
