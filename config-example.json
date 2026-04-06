@@ -4,10 +4,10 @@
   "label-selector": "AUTOBACKUP",
   "keep-last": 3,
 
-  "ntfy-notify": true,
+  "notification-type": "ntfy",
+  
   "ntfy-bin": "/usr/bin/ntfy-send",
 
-  "smtp-notify": false,
   "smtp-host": "",
   "smtp-port": 587,
   "smtp-user": "",
