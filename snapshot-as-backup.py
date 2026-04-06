@@ -2,7 +2,6 @@
 
 import os
 import sys
-import json
 import time
 import signal
 import socket
@@ -97,11 +96,22 @@ def setup_notifications(
         )
 
 
-def send_startup_notification():
+def send_startup_notification(cron_string=None):
+    now = time.strftime("%Y-%m-%d %H:%M:%S")
+
+    if cron_string and cron_string.lower() != "false":
+        human = CronHumanizer.describe(cron_string)
+        cron_info = f"\nSchedule: {human} ({cron_string})"
+    else:
+        cron_info = "\nSchedule: manual run"
+
+    message = f"Container started\n" f"Time: {now}" f"{cron_info}"
+
     async_notify(
         f"[{hostname}] Service started successfully",
-        f"Container started\nTime: {time.strftime('%Y-%m-%d %H:%M:%S')}",
+        message,
     )
+
     Console.info("Service started successfully")
 
 
@@ -211,7 +221,7 @@ def run():
         f"Backup started\nTime: {start_time}",
     )
 
-    Console.success("Snapshot job started at {start_time}")
+    Console.success(f"Snapshot job started at {start_time}")
 
     exit_code = 0
 
@@ -245,7 +255,7 @@ def run():
     )
 
     Console.success(
-        "Job status: {status} -> Servers: {len(servers)} | Start: {start_time} -> End: {end_time}"
+        f"Job status: {status} -> Servers: {len(servers)} | Start: {start_time} -> End: {end_time}"
     )
 
 
@@ -281,24 +291,16 @@ if __name__ == "__main__":
             },
         )
 
-        send_startup_notification()
-
         cron_string = os.environ.get("CRON", "0 1 * * *")
 
         if cron_string.lower() == "false":
+            send_startup_notification()
             run()
             sys.exit(exit_code)
 
         cron_scheduler = CronScheduler(cron_string)
 
-        humanizedCron = CronHumanizer.describe(cron_string)
-
-        async_notify(
-            f"[{hostname}] Backup",
-            f"Cron scheduler started -> {humanizedCron} ({cron_string})",
-        )
-
-        Console.success(f"Cron scheduler started -> {humanizedCron} ({cron_string})")
+        send_startup_notification(cron_string)
 
         while True:
             if cron_scheduler.time_for_execution():
