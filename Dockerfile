@@ -5,7 +5,8 @@ RUN apk add --no-cache \
     git \
     bash \
     curl \
-    su-exec
+    su-exec \
+    tzdata
 
 WORKDIR /app
 
