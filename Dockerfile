@@ -17,21 +17,18 @@ RUN adduser \
     --uid "10001" \
     app
 
-# ntfy-send installieren (stabil & eindeutig)
-RUN git clone https://github.com/maralexofficial/ntfy-send.git /tmp/ntfy-send && \
-    cp /tmp/ntfy-send/ntfy-send.sh /usr/bin/ntfy-send && \
-    chmod 755 /usr/bin/ntfy-send && \
-    mkdir -p /etc/ntfy-send && \
-    cp /tmp/ntfy-send/.env.example /etc/ntfy-send/.env && \
-    chmod 644 /etc/ntfy-send/.env && \
+RUN git clone https://github.com/maralexofficial/ntfy-send.git /tmp/ntfy-send &&
+    cp /tmp/ntfy-send/ntfy-send.sh /usr/bin/ntfy-send &&
+    chmod 755 /usr/bin/ntfy-send &&
+    mkdir -p /etc/ntfy-send &&
     rm -rf /tmp/ntfy-send
 
-# Python deps
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
     python -m pip install -r requirements.txt
-
-USER app
 
 COPY snapshot-as-backup.py README.md LICENSE ./
 COPY lib ./lib
@@ -40,4 +37,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV IN_DOCKER_CONTAINER=true
 
+USER app
+
+ENTRYPOINT ["/entrypoint.sh"]
 CMD [ "python3", "-u", "/app/snapshot-as-backup.py"]
