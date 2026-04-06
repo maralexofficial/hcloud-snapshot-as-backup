@@ -5,8 +5,7 @@
   "keep-last": 3,
 
   "notification-type": "ntfy",
-  
-  "ntfy-bin": "/usr/bin/ntfy-send",
+
   "ntfy-topic": "my-backup-topic",
 
   "smtp-host": "",

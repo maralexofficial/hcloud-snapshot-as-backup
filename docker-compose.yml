@@ -15,7 +15,6 @@ services:
         - KEEP_LAST=3
         - CRON=0 1 * * *
         - NOTIFICATION_TYPE=ntfy
-        # - NTFY_BIN=/usr/bin/ntfy-send
         # - NTFY_TOPIC=hetzner-backup
         - SMTP_HOST=
         - SMTP_PORT=587

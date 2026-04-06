@@ -1,4 +1,4 @@
-# Licensed under MIT (https://github.com/fbrettnich/hcloud-snapshot-as-backup/blob/main/LICENSE)
+# Licensed under MIT
 
 import os
 import sys
@@ -9,7 +9,6 @@ import socket
 import threading
 import queue
 import requests
-import os.path
 from cron_validator import CronScheduler
 
 from lib.notifications import NotificationManager
@@ -17,6 +16,7 @@ from lib.providers.ntfy import NtfyProvider
 from lib.providers.smtp import SMTPProvider
 
 base_url = "https://api.hetzner.cloud/v1"
+
 api_token = ""
 snapshot_name = ""
 label_selector = ""
@@ -29,11 +29,8 @@ snapshot_list = {}
 exit_code = 0
 
 notifier = None
-hostname = (
-    os.environ.get("HOSTNAME")
-    or os.environ.get("COMPOSE_PROJECT_NAME")
-    or socket.gethostname()
-)
+
+hostname = os.environ.get("HOSTNAME") or socket.gethostname()
 
 notification_queue = queue.Queue()
 
@@ -60,8 +57,7 @@ def handle_stop(signum, frame):
         f"Container stopped\nTime: {time.strftime('%Y-%m-%d %H:%M:%S')}",
     )
 
-    time.sleep(1)
-
+    time.sleep(2)
     sys.exit(0)
 
 
@@ -108,76 +104,86 @@ def send_startup_notification():
 
 def get_servers(page=1):
     global exit_code
-    url = base_url + f"/servers?label_selector={label_selector}=true&page=" + str(page)
+
+    url = f"{base_url}/servers?label_selector={label_selector}=true&page={page}"
     r = requests.get(url=url, headers=headers)
 
     if not r.ok:
-        print(f"Servers Page #{page} could not be retrieved: {r.reason}")
+        print(f"Servers Page #{page} failed: {r.reason}")
         exit_code = 1
-    else:
-        r = r.json()
-        np = r["meta"]["pagination"]["next_page"]
+        return
 
-        for s in r["servers"]:
-            servers[s["id"]] = s
+    r = r.json()
+    np = r["meta"]["pagination"]["next_page"]
 
-            keep_last = keep_last_default
-            if f"{label_selector}.KEEP-LAST" in s["labels"]:
-                keep_last = int(s["labels"][f"{label_selector}.KEEP-LAST"])
+    for s in r["servers"]:
+        servers[s["id"]] = s
 
-            if keep_last < 1:
-                keep_last = 1
+        keep_last = keep_last_default
+        label_key = f"{label_selector}.KEEP-LAST"
 
-            servers_keep_last[s["id"]] = keep_last
+        if label_key in s["labels"]:
+            keep_last = int(s["labels"][label_key])
 
-        if np is not None:
-            get_servers(np)
+        servers_keep_last[s["id"]] = max(1, keep_last)
+
+    if np:
+        get_servers(np)
 
 
 def create_snapshot(server_id, snapshot_desc):
     global exit_code
 
-    url = base_url + "/servers/" + str(server_id) + "/actions/create_image"
+    url = f"{base_url}/servers/{server_id}/actions/create_image"
+
     r = requests.post(
         url=url,
         json={
             "description": snapshot_desc,
             "type": "snapshot",
-            "labels": {f"{label_selector}": ""},
+            "labels": {label_selector: ""},
         },
         headers=headers,
     )
 
     if not r.ok:
-        print(f"Snapshot for Server #{server_id} failed")
+        print(f"Snapshot failed for server {server_id}")
         exit_code = 1
     else:
-        print(f"Snapshot created for Server #{server_id}")
+        print(f"Snapshot created for server {server_id}")
 
 
 def get_snapshots(page=1):
     global exit_code
 
-    url = (
-        base_url
-        + f"/images?type=snapshot&label_selector={label_selector}&page="
-        + str(page)
-    )
+    url = f"{base_url}/images?type=snapshot&label_selector={label_selector}&page={page}"
     r = requests.get(url=url, headers=headers)
 
     if not r.ok:
         print(f"Snapshots Page #{page} failed")
         exit_code = 1
-    else:
-        r = r.json()
-        np = r["meta"]["pagination"]["next_page"]
+        return
 
-        for i in r["images"]:
-            sid = i["created_from"]["id"]
-            snapshot_list.setdefault(sid, []).append(i["id"])
+    r = r.json()
+    np = r["meta"]["pagination"]["next_page"]
 
-        if np is not None:
-            get_snapshots(np)
+    for img in r["images"]:
+        sid = img["created_from"]["id"]
+        snapshot_list.setdefault(sid, []).append(img["id"])
+
+    if np:
+        get_snapshots(np)
+
+
+def delete_snapshots(snapshot_id, server_id):
+    global exit_code
+
+    url = f"{base_url}/images/{snapshot_id}"
+    r = requests.delete(url=url, headers=headers)
+
+    if not r.ok:
+        print(f"Delete failed #{snapshot_id}")
+        exit_code = 1
 
 
 def cleanup_snapshots():
@@ -187,19 +193,9 @@ def cleanup_snapshots():
 
         if len(si) > keep_last:
             si.sort(reverse=True)
-            for s in si[keep_last:]:
-                delete_snapshots(s, k)
 
-
-def delete_snapshots(snapshot_id, server_id):
-    global exit_code
-
-    url = base_url + "/images/" + str(snapshot_id)
-    r = requests.delete(url=url, headers=headers)
-
-    if not r.ok:
-        print(f"Delete failed #{snapshot_id}")
-        exit_code = 1
+            for snapshot_id in si[keep_last:]:
+                delete_snapshots(snapshot_id, k)
 
 
 def run():
@@ -238,14 +234,10 @@ def run():
 
     status = "Success" if exit_code == 0 else "Error"
 
-    msg = (
-        f"{status}\n"
-        f"Servers: {len(servers)}\n"
-        f"Start: {start_time}\n"
-        f"End: {end_time}"
+    async_notify(
+        f"[{hostname}] Backup {status}",
+        f"{status}\nServers: {len(servers)}\nStart: {start_time}\nEnd: {end_time}",
     )
-
-    async_notify(f"[{hostname}] Backup {status}", msg)
 
 
 if __name__ == "__main__":
@@ -260,8 +252,7 @@ if __name__ == "__main__":
 
         notifier = NotificationManager()
 
-        worker = threading.Thread(target=notification_worker, daemon=True)
-        worker.start()
+        threading.Thread(target=notification_worker, daemon=True).start()
 
         setup_notifications(
             os.environ.get("NOTIFICATION_TYPE", ""),
