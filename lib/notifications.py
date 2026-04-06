@@ -18,7 +18,7 @@ class NotificationManager:
         if not provider:
             return
 
-        provider_name = provider.__class__.__name__.replace("Provider", "").lower()
+        provider_name = getattr(provider, "name", "").lower()
 
         if self.allowed_types and provider_name not in self.allowed_types:
             return
