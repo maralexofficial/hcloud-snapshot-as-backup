@@ -3,7 +3,7 @@ FROM python:3.14-alpine
 RUN apk add --no-cache \
     tzdata \
     git \
-    go
+    bash
 
 WORKDIR /app
 
@@ -16,14 +16,13 @@ RUN adduser \
     --uid "10001" \
     app
 
-# ntfy-send build + install + config setup
+# ntfy-send installieren (Shell Script)
 RUN git clone https://github.com/maralexofficial/ntfy-send.git /tmp/ntfy-send && \
-    cd /tmp/ntfy-send && \
-    go build -o ntfy-send && \
-    mv ntfy-send /usr/bin/ntfy-send && \
     mkdir -p /etc/ntfy-send && \
-    cp .env.example /etc/ntfy-send/.env && \
-    chmod 644 /etc/ntfy-send/.env && \
+    cp /tmp/ntfy-send/ntfy-send.sh /usr/bin/ntfy-send && \
+    chmod +x /usr/bin/ntfy-send && \
+    if [ -f /tmp/ntfy-send/.env.example ]; then cp /tmp/ntfy-send/.env.example /etc/ntfy-send/.env; fi && \
+    chmod 644 /etc/ntfy-send/.env 2>/dev/null || true && \
     rm -rf /tmp/ntfy-send
 
 # Python deps
@@ -40,4 +39,4 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV IN_DOCKER_CONTAINER=true
 
-CMD [ "python3", "-u", "/app/snapshot-as-backup.py" ]
+CMD [ "python3", "-u", "/app/snapshot-as-backup.py"]
