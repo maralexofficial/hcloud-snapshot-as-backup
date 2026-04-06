@@ -4,6 +4,7 @@ import subprocess
 
 
 class NtfyProvider:
+    name = "ntfy"
     def __init__(self, enabled=True, bin_path=None, topic=None):
         self._enabled = enabled
 
