@@ -14,7 +14,7 @@ def send_stop_notification(notify, hostname):
     Console.success("Service stopped successfully")
 
 
-def send_start_notification(cron_string=None, notify, hostname):
+def send_start_notification(notify, hostname, cron_string=None):
     now = time.strftime("%Y-%m-%d %H:%M:%S")
 
     if cron_string and cron_string.lower() != "false":
