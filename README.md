@@ -3,6 +3,7 @@
 * [Preface](#preface)
 * [About this fork](#about-this-fork)
 * [Installation](#installation)
+* [Quick Overview](#quick-overview)
 * [Authors](#authors)
 * [License](#license)
 
