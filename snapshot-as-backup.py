@@ -16,6 +16,9 @@ from lib.notifications import NotificationManager
 from lib.providers.ntfy import NtfyProvider
 from lib.providers.smtp import SMTPProvider
 
+os.environ["TZ"] = os.environ.get("TZ", "Europe/Berlin")
+time.tzset()
+
 base_url = "https://api.hetzner.cloud/v1"
 
 api_token = ""
