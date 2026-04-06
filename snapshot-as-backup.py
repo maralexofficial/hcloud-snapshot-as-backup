@@ -5,6 +5,7 @@ import sys
 import json
 import time
 import requests
+import os.path
 from cron_validator import CronScheduler
 
 from lib.providers.notifications import NotificationManager
@@ -23,12 +24,11 @@ servers_keep_last = {}
 snapshot_list = {}
 exit_code = 0
 
-# notifier
 notifier = None
 
 
 def send_startup_notification():
-    if not notifier:
+    if not notifier or not notifier.providers:
         return
 
     notifier.send(
@@ -140,13 +140,12 @@ def delete_snapshots(snapshot_id, server_id):
 def run():
     global exit_code, notifier
 
-    if api_token is None:
+    if not api_token:
         print("API token is missing... Exit.")
         sys.exit(1)
 
     start_time = time.strftime('%Y-%m-%d %H:%M:%S')
 
-    # ▶️ START NOTIFICATION (Backup)
     if notifier:
         notifier.send(
             f"Backup gestartet\nZeit: {start_time}",
@@ -185,7 +184,6 @@ def run():
 
     cleanup_snapshots()
 
-    # 🔔 END NOTIFICATION
     end_time = time.strftime('%Y-%m-%d %H:%M:%S')
 
     if exit_code == 0:
@@ -211,6 +209,7 @@ if __name__ == '__main__':
     IN_DOCKER_CONTAINER = os.environ.get('IN_DOCKER_CONTAINER', False)
 
     if IN_DOCKER_CONTAINER:
+
         api_token = os.environ.get('API_TOKEN')
         snapshot_name = os.environ.get('SNAPSHOT_NAME', "%name%-%timestamp%")
         label_selector = os.environ.get('LABEL_SELECTOR', 'AUTOBACKUP')
@@ -218,25 +217,26 @@ if __name__ == '__main__':
 
         notifier = NotificationManager()
 
-        # ntfy
-        ntfy_enabled = str(os.environ.get('NTFY_NOTIFY', 'false')).lower() == "true"
-        ntfy_bin = os.environ.get('NTFY_BIN', "/usr/bin/ntfy-send")
-        notifier.register(NtfyProvider(ntfy_enabled, ntfy_bin))
+        notification_type = os.environ.get('NOTIFICATION_TYPE', '').lower()
 
-        # smtp
-        smtp_enabled = str(os.environ.get('SMTP_NOTIFY', 'false')).lower() == "true"
-        notifier.register(SMTPProvider(
-            enabled=smtp_enabled,
-            host=os.environ.get('SMTP_HOST'),
-            port=int(os.environ.get('SMTP_PORT', 587)),
-            user=os.environ.get('SMTP_USER'),
-            password=os.environ.get('SMTP_PASS'),
-            sender=os.environ.get('SMTP_FROM'),
-            receiver=os.environ.get('SMTP_TO'),
-            tls=str(os.environ.get('SMTP_TLS', 'true')).lower() == "true"
-        ))
+        if not notification_type or "ntfy" in notification_type:
+            ntfy_enabled = str(os.environ.get('NTFY_NOTIFY', 'false')).lower() == "true"
+            ntfy_bin = os.environ.get('NTFY_BIN', "/usr/bin/ntfy-send")
+            notifier.register(NtfyProvider(ntfy_enabled, ntfy_bin))
 
-        # ▶️ STARTUP NOTIFICATION (once)
+        if not notification_type or "smtp" in notification_type:
+            smtp_enabled = str(os.environ.get('SMTP_NOTIFY', 'false')).lower() == "true"
+            notifier.register(SMTPProvider(
+                enabled=smtp_enabled,
+                host=os.environ.get('SMTP_HOST'),
+                port=int(os.environ.get('SMTP_PORT', 587)),
+                user=os.environ.get('SMTP_USER'),
+                password=os.environ.get('SMTP_PASS'),
+                sender=os.environ.get('SMTP_FROM'),
+                receiver=os.environ.get('SMTP_TO'),
+                tls=str(os.environ.get('SMTP_TLS', 'true')).lower() == "true"
+            ))
+
         send_startup_notification()
 
         cron_string = os.environ.get('CRON', '0 1 * * *')
@@ -270,23 +270,26 @@ if __name__ == '__main__':
 
         notifier = NotificationManager()
 
-        notifier.register(NtfyProvider(
-            config.get('ntfy-notify', False),
-            config.get('ntfy-bin', "/usr/bin/ntfy-send")
-        ))
+        notification_type = config.get('notification-type', '').lower()
 
-        notifier.register(SMTPProvider(
-            enabled=config.get('smtp-notify', False),
-            host=config.get('smtp-host'),
-            port=config.get('smtp-port', 587),
-            user=config.get('smtp-user'),
-            password=config.get('smtp-pass'),
-            sender=config.get('smtp-from'),
-            receiver=config.get('smtp-to'),
-            tls=config.get('smtp-tls', True)
-        ))
+        if not notification_type or "ntfy" in notification_type:
+            notifier.register(NtfyProvider(
+                config.get('ntfy-notify', False),
+                config.get('ntfy-bin', "/usr/bin/ntfy-send")
+            ))
 
-        # ▶️ STARTUP NOTIFICATION (once)
+        if not notification_type or "smtp" in notification_type:
+            notifier.register(SMTPProvider(
+                enabled=config.get('smtp-notify', False),
+                host=config.get('smtp-host'),
+                port=config.get('smtp-port', 587),
+                user=config.get('smtp-user'),
+                password=config.get('smtp-pass'),
+                sender=config.get('smtp-from'),
+                receiver=config.get('smtp-to'),
+                tls=config.get('smtp-tls', True)
+            ))
+
         send_startup_notification()
 
         run()
