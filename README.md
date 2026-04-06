@@ -14,7 +14,33 @@ Kindly avoid contacting or burdening the original author with problems related t
 ### Installation
 
 ## Docker image
-soon
+Usecase with ntfy
+```
+docker run -d \
+  --name hcloud-autosnapshot \
+  -e API_TOKEN=your_hcloud_api_token \
+  -e LABEL_SELECTOR=AUTOBACKUP \
+  -e KEEP_LAST=3 \
+  -e CRON="0 1 * * *" \
+  -e NOTIFICATION_TYPE=ntfy \
+  -e NTFY_USER=dein_user \
+  -e NTFY_PASSWORD=dein_passwort \
+  -e NTFY_SERVER=https://example.tld \
+  -e NTFY_TOPIC=hades-notifications \
+  -e NTFY_ENV_FILE=/app/.ntfy.env \
+  maralexofficial/hcloud-snapshot-as-backup:latest
+```
+
+Usecase without notifications
+```
+docker run -d \
+  --name hcloud-autosnapshot \
+  -e API_TOKEN=your_hcloud_api_token \
+  -e LABEL_SELECTOR=AUTOBACKUP \
+  -e KEEP_LAST=3 \
+  -e CRON="0 1 * * *" \
+  maralexofficial/hcloud-snapshot-as-backup:latest
+```
 
 ## Docker build
 soon
