@@ -184,7 +184,7 @@ if __name__ == "__main__":
 
         cron_string = os.environ.get("CRON", "0 1 * * *")
 
-        send_startup_notification(cron_string)
+        send_start_notification(cron_string)
 
         if cron_string.lower() == "false":
             run()
