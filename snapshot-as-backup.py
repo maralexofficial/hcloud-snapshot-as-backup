@@ -29,7 +29,11 @@ snapshot_list = {}
 exit_code = 0
 
 notifier = None
-hostname = os.environ.get("HOSTNAME", socket.gethostname())
+hostname = (
+    os.environ.get("HOSTNAME")
+    or os.environ.get("COMPOSE_PROJECT_NAME")
+    or socket.gethostname()
+)
 
 notification_queue = queue.Queue()
 
