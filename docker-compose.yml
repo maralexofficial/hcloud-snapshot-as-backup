@@ -19,6 +19,7 @@ services:
         - NTFY_PASSWORD=dein_passwort
         - NTFY_SERVER=https://example.tld
         - NTFY_TOPIC=hades-notifications
+        - NTFY_ENV_FILE=/app/.ntfy.env
 
         - SMTP_HOST=
         - SMTP_PORT=587
