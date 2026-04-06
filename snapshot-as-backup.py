@@ -267,8 +267,8 @@ if __name__ == "__main__":
     if IN_DOCKER_CONTAINER:
         api_token = os.environ.get("API_TOKEN")
 
-if not api_token:
-    Console.error("API_TOKEN is not set. Exiting container.")
+    if not api_token or not api_token.strip():
+    Console.error("API_TOKEN is missing or empty. Exiting container.")
     sys.exit(1)
 
         snapshot_name = os.environ.get("SNAPSHOT_NAME", "%name%-%timestamp%")
