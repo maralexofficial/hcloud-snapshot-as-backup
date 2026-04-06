@@ -11,6 +11,7 @@ import queue
 import requests
 from cron_validator import CronScheduler
 
+from lib.cron_humanizer import CronHumanizer
 from lib.console import Console
 from lib.notifications import NotificationManager
 from lib.providers.ntfy import NtfyProvider
@@ -290,7 +291,9 @@ if __name__ == "__main__":
 
         cron_scheduler = CronScheduler(cron_string)
 
-        Console.success("CRON in container is set to: {cron_string}")
+        humanizedCron = CronHumanizer.describe(cron_string)
+
+        Console.success(f"Cron scheduler started -> {humanizedCron} ({cron_string})")
 
         while True:
             if cron_scheduler.time_for_execution():
