@@ -16,6 +16,43 @@ For ease of use, the script works with the powerful labels directly in the Hetzn
 - [About Labels](#about-labels)
 - [Why is this script useful?](#why-is-this-script-useful)
 
+
+## Notifications (Fork Feature)
+
+This fork adds a flexible notification system.
+
+### Enable notifications
+
+NOTIFICATION_TYPE=""
+
+| Value              | Behavior              |
+|-------------------|----------------------|
+| ""                | No notifications     |
+| "ntfy"            | ntfy only           |
+| "smtp"            | SMTP only           |
+| "ntfy,smtp"       | Both                |
+
+### ntfy
+
+NTFY_BIN=/usr/bin/ntfy-send  
+NTFY_TOPIC=DEFAULT  
+
+### SMTP
+
+SMTP_HOST=  
+SMTP_PORT=587  
+SMTP_USER=  
+SMTP_PASS=  
+SMTP_FROM=  
+SMTP_TO=  
+SMTP_TLS=true  
+
+### Startup Notification
+
+If enabled, you get:
+
+Container gestartet
+
 ## Installation
 
 ### Installation: With Docker (Recommended)
