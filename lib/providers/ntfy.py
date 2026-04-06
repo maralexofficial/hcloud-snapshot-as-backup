@@ -1,24 +1,40 @@
-import subprocess
+import os
 import shutil
+import subprocess
 
 
 class NtfyProvider:
-    def __init__(self, enabled=False, binary="/usr/bin/ntfy-send"):
+    def __init__(self, enabled=True, bin_path=None):
         self.enabled = enabled
-        self.binary = binary
+        
+        fallback = "/usr/bin/ntfy-send"
 
-    def is_enabled(self):
-        return self.enabled
+        if not bin_path:
+            bin_path = fallback
 
-    def is_available(self):
-        return shutil.which(self.binary) is not None
+        if not shutil.which(bin_path) and not os.path.isfile(bin_path):
+            print(f"[ntfy] Binary not found: {bin_path} -> fallback to {fallback}")
+            bin_path = fallback
 
-    def send(self, message, title="Hetzner Backup"):
-        if not self.is_available():
-            print(f"ntfy binary not found: {self.binary}")
+        if not shutil.which(bin_path) and not os.path.isfile(bin_path):
+            print(f"[ntfy] WARNING: ntfy-send not found at {bin_path}")
+            self.enabled = False
+
+        self.bin_path = bin_path
+
+    def send(self, message, title=""):
+        if not self.enabled:
             return
 
-        subprocess.run(
-            [self.binary, "-t", title, message],
-            check=True
-        )
+        try:
+            cmd = [self.bin_path]
+
+            if title:
+                cmd.extend(["-t", title])
+
+            cmd.append(message)
+
+            subprocess.run(cmd, check=False)
+
+        except Exception as e:
+            print(f"[ntfy] Failed to send notification: {e}")
