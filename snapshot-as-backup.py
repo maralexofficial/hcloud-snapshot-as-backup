@@ -5,7 +5,7 @@ import sys
 import time
 import signal
 import socket
-import requests
+
 from cron_validator import CronScheduler
 
 from lib.cron_humanizer import CronHumanizer
@@ -13,6 +13,14 @@ from lib.console import Console
 from lib.notifications import NotificationManager
 from lib.providers.ntfy import NtfyProvider
 from lib.providers.smtp import SMTPProvider
+
+from lib.hetzner_api import HetznerAPI
+from lib.snapshot_manager import SnapshotManager
+
+from lib.service_notifications import (
+    send_start_notification,
+    send_stop_notification,
+)
 
 # Timezone fix
 os.environ["TZ"] = os.environ.get("TZ", "Europe/Berlin")
@@ -26,9 +34,6 @@ label_selector = ""
 keep_last_default = 3
 
 headers = {}
-servers = {}
-servers_keep_last = {}
-snapshot_list = {}
 exit_code = 0
 
 notifier = None
@@ -41,14 +46,11 @@ def notify(title, message):
         try:
             notifier.send(message, title)
         except Exception as e:
-            print(f"[ntfy] send failed: {e}")
+            Console.error(f"[ntfy] send failed: {e}")
 
 
 def handle_stop(signum, frame):
-    notify(
-        f"[{hostname}] Service stopped successfully",
-        f"Container stopped\nTime: {time.strftime('%Y-%m-%d %H:%M:%S')}",
-    )
+    send_stop_notification()
     time.sleep(2)
     sys.exit(0)
 
@@ -57,7 +59,9 @@ signal.signal(signal.SIGTERM, handle_stop)
 signal.signal(signal.SIGINT, handle_stop)
 
 
-def setup_notifications(notification_type, notifier, ntfy_config=None, smtp_config=None):
+def setup_notifications(
+    notification_type, notifier_instance, ntfy_config=None, smtp_config=None
+):
     notification_type = (notification_type or "").lower().strip()
 
     if not notification_type:
@@ -66,12 +70,12 @@ def setup_notifications(notification_type, notifier, ntfy_config=None, smtp_conf
     types = [t.strip() for t in notification_type.split(",")]
 
     if "ntfy" in types and ntfy_config:
-        notifier.register(
+        notifier_instance.register(
             NtfyProvider(True, ntfy_config["bin"], topic=ntfy_config["topic"])
         )
 
     if "smtp" in types and smtp_config:
-        notifier.register(
+        notifier_instance.register(
             SMTPProvider(
                 enabled=True,
                 host=smtp_config["host"],
@@ -85,122 +89,6 @@ def setup_notifications(notification_type, notifier, ntfy_config=None, smtp_conf
         )
 
 
-def send_startup_notification(cron_string=None):
-    now = time.strftime("%Y-%m-%d %H:%M:%S")
-
-    if cron_string and cron_string.lower() != "false":
-        human = CronHumanizer.describe(cron_string)
-        cron_info = f"\nSchedule: {human} ({cron_string})"
-    else:
-        cron_info = "\nSchedule: manual run"
-
-    message = f"Container started\nTime: {now}{cron_info}"
-
-    notify(
-        f"[{hostname}] Service started successfully",
-        message,
-    )
-
-    Console.info("Service started successfully")
-    Console.info(cron_info)
-
-
-def get_servers(page=1):
-    global exit_code
-
-    url = f"{base_url}/servers?label_selector={label_selector}=true&page={page}"
-    r = requests.get(url=url, headers=headers)
-
-    if not r.ok:
-        Console.error(f"Servers Page #{page} failed: {r.reason}")
-        exit_code = 1
-        return
-
-    r = r.json()
-    np = r["meta"]["pagination"]["next_page"]
-
-    for s in r["servers"]:
-        servers[s["id"]] = s
-
-        keep_last = keep_last_default
-        label_key = f"{label_selector}.KEEP-LAST"
-
-        if label_key in s["labels"]:
-            keep_last = int(s["labels"][label_key])
-
-        servers_keep_last[s["id"]] = max(1, keep_last)
-
-    if np:
-        get_servers(np)
-
-
-def create_snapshot(server_id, snapshot_desc):
-    global exit_code
-
-    url = f"{base_url}/servers/{server_id}/actions/create_image"
-
-    r = requests.post(
-        url=url,
-        json={
-            "description": snapshot_desc,
-            "type": "snapshot",
-            "labels": {label_selector: ""},
-        },
-        headers=headers,
-    )
-
-    if not r.ok:
-        Console.error(f"Snapshot failed for server {server_id}")
-        exit_code = 1
-    else:
-        Console.success(f"Snapshot created for server {server_id}")
-
-
-def get_snapshots(page=1):
-    global exit_code
-
-    url = f"{base_url}/images?type=snapshot&label_selector={label_selector}&page={page}"
-    r = requests.get(url=url, headers=headers)
-
-    if not r.ok:
-        Console.error(f"Snapshots Page #{page} failed")
-        exit_code = 1
-        return
-
-    r = r.json()
-    np = r["meta"]["pagination"]["next_page"]
-
-    for img in r["images"]:
-        sid = img["created_from"]["id"]
-        snapshot_list.setdefault(sid, []).append(img["id"])
-
-    if np:
-        get_snapshots(np)
-
-
-def delete_snapshots(snapshot_id, server_id):
-    global exit_code
-
-    url = f"{base_url}/images/{snapshot_id}"
-    r = requests.delete(url=url, headers=headers)
-
-    if not r.ok:
-        Console.error(f"Delete failed #{snapshot_id}")
-        exit_code = 1
-
-
-def cleanup_snapshots():
-    for k in snapshot_list:
-        si = snapshot_list[k]
-        keep_last = servers_keep_last.get(k, keep_last_default)
-
-        if len(si) > keep_last:
-            si.sort(reverse=True)
-
-            for snapshot_id in si[keep_last:]:
-                delete_snapshots(snapshot_id, k)
-
-
 def run():
     global exit_code
 
@@ -209,40 +97,38 @@ def run():
         return
 
     start_time = time.strftime("%Y-%m-%d %H:%M:%S")
-
     exit_code = 0
 
-    servers.clear()
-    servers_keep_last.clear()
-    snapshot_list.clear()
-
+    headers.clear()
     headers["Content-Type"] = "application/json"
     headers["Authorization"] = "Bearer " + api_token
 
-    get_servers()
+    api = HetznerAPI(base_url, headers, label_selector, Console)
+    snapshot_manager = SnapshotManager(api, Console)
+
+    servers = {}
+    servers_keep_last = {}
+    snapshot_list = {}
+
+    servers, servers_keep_last, _ = api.get_servers(
+        servers=servers,
+        servers_keep_last=servers_keep_last,
+        keep_last_default=keep_last_default,
+    )
 
     if not servers:
         message = f"No servers found with label '{label_selector}'. Skipping run."
-
         Console.error(message)
-
-        notify(
-            f"[{hostname}] Snapshot skipped",
-            message
-        )
-
+        notify(f"[{hostname}] Snapshot skipped", message)
         return
 
-    for server in servers:
-        create_snapshot(
-            server,
-            snapshot_name.replace("%id%", str(server))
-            .replace("%name%", servers[server]["name"])
-            .replace("%timestamp%", str(int(time.time()))),
-        )
+    snapshot_manager.run_snapshots(servers, snapshot_name)
 
-    get_snapshots()
-    cleanup_snapshots()
+    snapshot_list, _ = api.get_snapshots(snapshot_list=snapshot_list)
+
+    snapshot_manager.cleanup_snapshots(
+        snapshot_list, servers_keep_last, keep_last_default
+    )
 
     end_time = time.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -250,19 +136,22 @@ def run():
 
     notify(
         f"[{hostname}] Snapshot job {status}",
-        f"{status}\nServers: {len(servers)}\nStart: {start_time}\nEnd: {end_time}",
+        f"Snapshot job status: {status}\nServers: {len(servers)}\nStart: {start_time}\nEnd: {end_time}",
     )
 
-    Console.info(
-        f"Snapshot status: {status} -> Servers: {len(servers)} | Start: {start_time} -> End: {end_time}"
-    )
+    if exit_code == 0:
+        Console.info(
+            f"Snapshot job status: {status} -> Servers: {len(servers)} | Start: {start_time} -> End: {end_time}"
+        )
+    else:
+        Console.error(
+            f"Snapshot job status: {status} -> Servers: {len(servers)} | Start: {start_time} -> End: {end_time}\n\nJob was not successfully. Please check your hetzner cloud."
+        )
 
 
 if __name__ == "__main__":
 
-    IN_DOCKER_CONTAINER = os.environ.get("IN_DOCKER_CONTAINER", False)
-
-    if IN_DOCKER_CONTAINER:
+    if os.environ.get("IN_DOCKER_CONTAINER", False):
         api_token = os.environ.get("API_TOKEN")
 
         if not api_token:
