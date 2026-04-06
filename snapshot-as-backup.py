@@ -266,6 +266,11 @@ if __name__ == "__main__":
 
     if IN_DOCKER_CONTAINER:
         api_token = os.environ.get("API_TOKEN")
+
+if not api_token:
+    Console.error("API_TOKEN is not set. Exiting container.")
+    sys.exit(1)
+
         snapshot_name = os.environ.get("SNAPSHOT_NAME", "%name%-%timestamp%")
         label_selector = os.environ.get("LABEL_SELECTOR", "AUTOBACKUP")
         keep_last_default = int(os.environ.get("KEEP_LAST", 3))
