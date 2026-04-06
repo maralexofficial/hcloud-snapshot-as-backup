@@ -22,7 +22,14 @@ class NtfyProvider:
 
         self.bin_path = bin_path
 
-        self.topic = topic or os.environ.get("NTFY_TOPIC", "DEFAULT")
+        env_topic = os.environ.get("NTFY_TOPIC")
+
+        if topic:
+            self.topic = topic
+        elif env_topic and env_topic.strip():
+            self.topic = env_topic
+        else:
+            self.topic = "DEFAULT"
 
         self.title = None
         self.priority = None
@@ -45,15 +52,15 @@ class NtfyProvider:
                 cmd.append(self.topic)
 
             if title or self.title:
-                cmd.append(f"--title={title or self.title}")
+                cmd.append(title or self.title)
+
+            cmd.append(message)
 
             if self.priority:
-                cmd.append(f"--priority={self.priority}")
+                cmd.append(f"--prio={self.priority}")
 
             if self.tags:
                 cmd.append(f"--tags={self.tags}")
-
-            cmd.append(message)
 
             subprocess.run(cmd, check=False)
 
