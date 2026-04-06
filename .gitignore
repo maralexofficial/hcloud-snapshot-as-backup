@@ -55,3 +55,5 @@ venv.bak/
 
 # Config files
 config.json
+
+docker-compose.prod.yml

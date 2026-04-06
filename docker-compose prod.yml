@@ -5,7 +5,7 @@ services:
       image: maralexofficial/hcloud-snapshot-as-backup
       restart: unless-stopped
       volumes:
-        #- /etc/ntfy-send/.env:/etc/ntfy-send/.env
+        - /etc/ntfy-send/.env:/etc/ntfy-send/.env
         - /etc/localtime:/etc/localtime:ro
       environment:
         - API_TOKEN=
