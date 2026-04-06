@@ -5,8 +5,6 @@ import sys
 import time
 import signal
 import socket
-import threading
-import queue
 import requests
 from cron_validator import CronScheduler
 
@@ -37,27 +35,17 @@ notifier = None
 
 hostname = os.environ.get("HOSTNAME") or socket.gethostname()
 
-notification_queue = queue.Queue()
 
-
-def notification_worker():
-    while True:
-        title, message = notification_queue.get()
+def notify(title, message):
+    if notifier:
         try:
-            if notifier:
-                notifier.send(message, title)
+            notifier.send(message, title)
         except Exception as e:
             print(f"[ntfy] send failed: {e}")
-        notification_queue.task_done()
-
-
-def async_notify(title, message):
-    if notifier:
-        notification_queue.put((title, message))
 
 
 def handle_stop(signum, frame):
-    async_notify(
+    notify(
         f"[{hostname}] Service stopped successfully",
         f"Container stopped\nTime: {time.strftime('%Y-%m-%d %H:%M:%S')}",
     )
@@ -108,7 +96,7 @@ def send_startup_notification(cron_string=None):
 
     message = f"Container started\nTime: {now}{cron_info}"
 
-    async_notify(
+    notify(
         f"[{hostname}] Service started successfully",
         message,
     )
@@ -222,7 +210,7 @@ def run():
 
     start_time = time.strftime("%Y-%m-%d %H:%M:%S")
 
-    async_notify(
+    notify(
         f"[{hostname}] Snapshot started",
         f"Backup started\nTime: {start_time}",
     )
@@ -240,13 +228,12 @@ def run():
 
     get_servers()
 
-    # ✅ NO SERVERS HANDLING
     if not servers:
         message = f"No servers found with label '{label_selector}'. Skipping run."
 
         Console.error(message)
 
-        async_notify(
+        notify(
             f"[{hostname}] Backup skipped",
             message
         )
@@ -268,7 +255,7 @@ def run():
 
     status = "Success" if exit_code == 0 else "Error"
 
-    async_notify(
+    notify(
         f"[{hostname}] Backup {status}",
         f"{status}\nServers: {len(servers)}\nStart: {start_time}\nEnd: {end_time}",
     )
@@ -294,8 +281,6 @@ if __name__ == "__main__":
         keep_last_default = int(os.environ.get("KEEP_LAST", 3))
 
         notifier = NotificationManager()
-
-        threading.Thread(target=notification_worker, daemon=True).start()
 
         setup_notifications(
             os.environ.get("NOTIFICATION_TYPE", ""),
