@@ -19,6 +19,6 @@ class Console:
         print(f"[{cls._ts()}] ERROR {msg}", flush=True)
 
     @classmethod
-    def notify(cls, title, message):
+    def notify(cls, message):
         clean_msg = message.replace("\n", " | ")
-        print(f"[{cls._ts()}] NOTIFY {title} -> {clean_msg}", flush=True)
+        print(f"[{cls._ts()}] NOTIFY {clean_msg}", flush=True)

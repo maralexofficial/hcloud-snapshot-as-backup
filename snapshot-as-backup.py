@@ -49,7 +49,6 @@ def notification_worker():
 
 def async_notify(title, message):
     if notifier:
-        Console.notify(title, message)
         notification_queue.put((title, message))
 
 
@@ -102,6 +101,7 @@ def send_startup_notification():
         f"[{hostname}] Service started successfully",
         f"Container started\nTime: {time.strftime('%Y-%m-%d %H:%M:%S')}",
     )
+    Console.notify("Service started successfully")
 
 
 def get_servers(page=1):
