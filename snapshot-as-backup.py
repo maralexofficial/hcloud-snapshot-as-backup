@@ -43,7 +43,7 @@ hostname = os.environ.get("HOSTNAME") or socket.gethostname()
 
 
 def handle_stop(signum, frame):
-    send_stop_notification(notify, hostname)
+    send_stop_notification(notify, hostname, notifier)
     time.sleep(2)
     sys.exit(0)
 
@@ -178,7 +178,7 @@ if __name__ == "__main__":
 
         cron_string = os.environ.get("CRON", "0 1 * * *")
 
-        send_start_notification(notify, hostname, cron_string)
+        send_start_notification(notify, hostname, notifier, cron_string)
 
         if cron_string.lower() == "false":
             run()
