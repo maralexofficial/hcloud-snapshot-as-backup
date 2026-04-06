@@ -11,6 +11,7 @@ import queue
 import requests
 from cron_validator import CronScheduler
 
+from lib.console import Console
 from lib.notifications import NotificationManager
 from lib.providers.ntfy import NtfyProvider
 from lib.providers.smtp import SMTPProvider
@@ -48,8 +49,7 @@ def notification_worker():
 
 def async_notify(title, message):
     if notifier:
-        ts = time.strftime("%Y-%m-%d %H:%M:%S")
-        print(f"[{ts}] [NOTIFY] {title}\n{message}", flush=True)
+        Console.notify(title, message)
         notification_queue.put((title, message))
 
 
