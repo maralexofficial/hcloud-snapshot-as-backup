@@ -34,3 +34,22 @@ Environment
 NOTIFICATION_TYPE=ntfy,smtp
 ```
 You can enable one or multiple providers by separating them with a comma.
+
+##### ntfy Configuration
+```
+Environment
+NTFY_BIN=/usr/bin/ntfy-send
+NTFY_TOPIC=your-topic
+```
+
+##### SMTP Configuration
+```
+Environment
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=your-user
+SMTP_PASS=your-password
+SMTP_FROM=sender@example.com
+SMTP_TO=receiver@example.com
+SMTP_TLS=true
+```
