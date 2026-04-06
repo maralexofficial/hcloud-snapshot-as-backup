@@ -4,6 +4,14 @@ from lib.console import Console
 from lib.cron_humanizer import CronHumanizer
 
 
+def notify(title, message):
+    if notifier:
+        try:
+            notifier.send(message, title)
+        except Exception as e:
+            Console.error(f"[ntfy] send failed: {e}")
+
+
 def send_stop_notification(notify, hostname):
     now = time.strftime("%Y-%m-%d %H:%M:%S")
 
