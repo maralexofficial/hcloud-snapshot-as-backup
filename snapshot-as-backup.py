@@ -29,7 +29,6 @@ notifier = None
 
 hostname = socket.gethostname()
 
-
 def setup_notifications(
     notification_type, notifier, ntfy_config=None, smtp_config=None
 ):
