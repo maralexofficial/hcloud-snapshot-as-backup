@@ -8,7 +8,6 @@ import socket
 
 from cron_validator import CronScheduler
 
-from lib.cron_humanizer import CronHumanizer
 from lib.console import Console
 from lib.notifications import NotificationManager
 from lib.providers.ntfy import NtfyProvider

@@ -1,6 +1,7 @@
 import time
 
 from lib.console import Console
+from lib.cron_humanizer import CronHumanizer
 
 
 def send_stop_notification(notify, hostname):
