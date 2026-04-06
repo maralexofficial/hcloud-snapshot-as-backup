@@ -1,4 +1,4 @@
-## Notice
+### Notice
 This repository is a customized fork based on the original work from
 https://github.com/fbrettnich/hcloud-snapshot-as-backup⁠�.
 First of all, a big thank you and full credit to the original author for creating and sharing such a solid and useful project. The foundation and core idea of this tool come entirely from that work, and it has been a great starting point.
@@ -8,3 +8,19 @@ If you find this project useful, I strongly encourage you to check out the origi
 ### ⚠️ Important Notice:
 For any issues, bugs, or questions specifically related to this fork, please open an issue here in this repository.
 Kindly avoid contacting or burdening the original author with problems related to this fork, as they are not responsible for the changes or behavior introduced here.
+
+### Key Changes in This Fork
+The most significant enhancement in this fork compared to the original project is the extended notification system.
+While the original implementation focuses primarily on snapshot creation and cleanup, this fork introduces a flexible and extensible notification layer that allows you to stay informed about the container’s activity in real time.
+Notification System
+This fork supports multiple notification providers, which can be used individually or in combination:
+ntfy – lightweight push notifications via a simple HTTP-based system
+SMTP (Email) – traditional email notifications for detailed reporting
+The system is designed in a modular way, making it easy to extend or adapt to additional notification providers in the future.
+
+##### Features of the Notification System
+* 📢 Notifications on startup, shutdown, and snapshot execution
+* ⏭️ Notifications when a run is skipped (e.g. no matching servers found)
+* ✅ Clear success and error reporting after each run
+* ⚙️ Configurable via environment variables
+* 🔄 Asynchronous sending to avoid blocking the main process
