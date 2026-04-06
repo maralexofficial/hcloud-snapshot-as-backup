@@ -3,6 +3,7 @@ from email.mime.text import MIMEText
 
 
 class SMTPProvider:
+    name = "smtp"
     def __init__(
         self,
         enabled=False,
