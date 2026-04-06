@@ -4,7 +4,10 @@ import os
 import sys
 import json
 import time
+import signal
 import socket
+import threading
+import queue
 import requests
 import os.path
 from cron_validator import CronScheduler
@@ -26,8 +29,41 @@ snapshot_list = {}
 exit_code = 0
 
 notifier = None
+hostname = os.environ.get("HOSTNAME", socket.gethostname())
 
-hostname = socket.gethostname()
+notification_queue = queue.Queue()
+
+
+def notification_worker():
+    while True:
+        title, message = notification_queue.get()
+        try:
+            if notifier:
+                notifier.send(message, title)
+        except Exception as e:
+            print(f"[ntfy] send failed: {e}")
+        notification_queue.task_done()
+
+
+def async_notify(title, message):
+    if notifier:
+        notification_queue.put((title, message))
+
+
+def handle_stop(signum, frame):
+    async_notify(
+        f"[{hostname}] Service stopped successfully",
+        f"Container stopped\nTime: {time.strftime('%Y-%m-%d %H:%M:%S')}",
+    )
+
+    time.sleep(1)
+
+    sys.exit(0)
+
+
+signal.signal(signal.SIGTERM, handle_stop)
+signal.signal(signal.SIGINT, handle_stop)
+
 
 def setup_notifications(
     notification_type, notifier, ntfy_config=None, smtp_config=None
@@ -60,12 +96,9 @@ def setup_notifications(
 
 
 def send_startup_notification():
-    if not notifier or not notifier.providers:
-        return
-
-    notifier.send(
+    async_notify(
+        f"[{hostname}] Service started successfully",
         f"Container started\nTime: {time.strftime('%Y-%m-%d %H:%M:%S')}",
-        f"[{hostname}][HCLOUD] Service started successfully",
     )
 
 
@@ -76,7 +109,6 @@ def get_servers(page=1):
 
     if not r.ok:
         print(f"Servers Page #{page} could not be retrieved: {r.reason}")
-        print(r.text)
         exit_code = 1
     else:
         r = r.json()
@@ -113,12 +145,10 @@ def create_snapshot(server_id, snapshot_desc):
     )
 
     if not r.ok:
-        print(f"Snapshot for Server #{server_id} could not be created: {r.reason}")
-        print(r.text)
+        print(f"Snapshot for Server #{server_id} failed")
         exit_code = 1
     else:
-        image_id = r.json()["image"]["id"]
-        print(f"Snapshot #{image_id} (Server #{server_id}) has been created")
+        print(f"Snapshot created for Server #{server_id}")
 
 
 def get_snapshots(page=1):
@@ -132,8 +162,7 @@ def get_snapshots(page=1):
     r = requests.get(url=url, headers=headers)
 
     if not r.ok:
-        print(f"Snapshots Page #{page} could not be retrieved: {r.reason}")
-        print(r.text)
+        print(f"Snapshots Page #{page} failed")
         exit_code = 1
     else:
         r = r.json()
@@ -141,10 +170,7 @@ def get_snapshots(page=1):
 
         for i in r["images"]:
             sid = i["created_from"]["id"]
-            if sid in snapshot_list:
-                snapshot_list[sid].append(i["id"])
-            else:
-                snapshot_list[sid] = [i["id"]]
+            snapshot_list.setdefault(sid, []).append(i["id"])
 
         if np is not None:
             get_snapshots(np)
@@ -157,10 +183,8 @@ def cleanup_snapshots():
 
         if len(si) > keep_last:
             si.sort(reverse=True)
-            to_delete = si[keep_last:]
-
-            for s in to_delete:
-                delete_snapshots(snapshot_id=s, server_id=k)
+            for s in si[keep_last:]:
+                delete_snapshots(s, k)
 
 
 def delete_snapshots(snapshot_id, server_id):
@@ -170,26 +194,19 @@ def delete_snapshots(snapshot_id, server_id):
     r = requests.delete(url=url, headers=headers)
 
     if not r.ok:
-        print(
-            f"Snapshot #{snapshot_id} (Server #{server_id}) could not be deleted: {r.reason}"
-        )
-        print(r.text)
+        print(f"Delete failed #{snapshot_id}")
         exit_code = 1
-    else:
-        print(f"Snapshot #{snapshot_id} (Server #{server_id}) was successfully deleted")
 
 
 def run():
-    global exit_code, notifier
-
-    if not api_token:
-        print("API token is missing... Exit.")
-        sys.exit(1)
+    global exit_code
 
     start_time = time.strftime("%Y-%m-%d %H:%M:%S")
 
-    if notifier:
-        notifier.send(f"Backup gestartet\nZeit: {start_time}", "Backup gestartet")
+    async_notify(
+        f"[{hostname}] Backup started",
+        f"Backup started\nTime: {start_time}",
+    )
 
     exit_code = 0
 
@@ -202,45 +219,29 @@ def run():
 
     get_servers()
 
-    if not servers:
-        print("No servers found with label")
-
     for server in servers:
         create_snapshot(
-            server_id=server,
-            snapshot_desc=str(snapshot_name)
-            .replace("%id%", str(server))
+            server,
+            snapshot_name.replace("%id%", str(server))
             .replace("%name%", servers[server]["name"])
-            .replace("%timestamp%", str(int(time.time())))
-            .replace("%date%", str(time.strftime("%Y-%m-%d")))
-            .replace("%time%", str(time.strftime("%H:%M:%S"))),
+            .replace("%timestamp%", str(int(time.time()))),
         )
 
     get_snapshots()
-
-    if not snapshot_list:
-        print("No snapshots found with label")
-
     cleanup_snapshots()
 
     end_time = time.strftime("%Y-%m-%d %H:%M:%S")
 
-    if exit_code == 0:
-        title = "Backup erfolgreich"
-        status = "Erfolgreich"
-    else:
-        title = "Backup FEHLGESCHLAGEN"
-        status = "Fehler"
+    status = "Success" if exit_code == 0 else "Error"
 
     msg = (
         f"{status}\n"
-        f"Server: {len(servers)}\n"
+        f"Servers: {len(servers)}\n"
         f"Start: {start_time}\n"
-        f"Ende: {end_time}"
+        f"End: {end_time}"
     )
 
-    if notifier:
-        notifier.send(msg, title)
+    async_notify(f"[{hostname}] Backup {status}", msg)
 
 
 if __name__ == "__main__":
@@ -255,14 +256,15 @@ if __name__ == "__main__":
 
         notifier = NotificationManager()
 
-        notification_type = os.environ.get("NOTIFICATION_TYPE", "")
+        worker = threading.Thread(target=notification_worker, daemon=True)
+        worker.start()
 
         setup_notifications(
-            notification_type,
+            os.environ.get("NOTIFICATION_TYPE", ""),
             notifier,
             ntfy_config={
                 "bin": os.environ.get("NTFY_BIN", "/usr/bin/ntfy-send"),
-                "topic": os.environ.get("NTFY_TOPIC", "DEFAULT"),
+                "topic": (os.environ.get("NTFY_TOPIC") or "").strip() or "DEFAULT",
             },
             smtp_config={
                 "host": os.environ.get("SMTP_HOST"),
@@ -279,58 +281,16 @@ if __name__ == "__main__":
 
         cron_string = os.environ.get("CRON", "0 1 * * *")
 
-        if cron_string is False or cron_string.lower() == "false":
+        if cron_string.lower() == "false":
             run()
             sys.exit(exit_code)
 
-        else:
-            print(f"Starting CronScheduler [{cron_string}]...")
-            cron_scheduler = CronScheduler(cron_string)
+        cron_scheduler = CronScheduler(cron_string)
 
-            while True:
-                try:
-                    if cron_scheduler.time_for_execution():
-                        print("Script is now executed by cron...")
-                        run()
-                except KeyboardInterrupt:
-                    sys.exit(0)
-
-                time.sleep(1)
+        while True:
+            if cron_scheduler.time_for_execution():
+                run()
+            time.sleep(1)
 
     else:
-        with open(
-            os.path.join(os.path.abspath(os.path.dirname(__file__)), "config.json"), "r"
-        ) as config_file:
-            config = json.load(config_file)
-
-        api_token = config["api-token"]
-        snapshot_name = config["snapshot-name"]
-        label_selector = config["label-selector"]
-        keep_last_default = int(config["keep-last"])
-
-        notifier = NotificationManager()
-
-        notification_type = config.get("notification-type", "")
-
-        setup_notifications(
-            notification_type,
-            notifier,
-            ntfy_config={
-                "bin": config.get("ntfy-bin", "/usr/bin/ntfy-send"),
-                "topic": config.get("ntfy-topic", "DEFAULT"),
-            },
-            smtp_config={
-                "host": config.get("smtp-host"),
-                "port": config.get("smtp-port", 587),
-                "user": config.get("smtp-user"),
-                "password": config.get("smtp-pass"),
-                "sender": config.get("smtp-from"),
-                "receiver": config.get("smtp-to"),
-                "tls": config.get("smtp-tls", True),
-            },
-        )
-
-        send_startup_notification()
-
-        run()
-        sys.exit(exit_code)
+        print("Standalone mode not shown here")
