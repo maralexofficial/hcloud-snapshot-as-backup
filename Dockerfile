@@ -16,15 +16,13 @@ RUN adduser \
     --uid "10001" \
     app
 
-# ntfy-send installieren (robust)
+# ntfy-send installieren (stabil & eindeutig)
 RUN git clone https://github.com/maralexofficial/ntfy-send.git /tmp/ntfy-send && \
-    ls -la /tmp/ntfy-send && \
-    find /tmp/ntfy-send -type f -name "*ntfy-send*" && \
-    cp $(find /tmp/ntfy-send -type f -name "*ntfy-send*" | head -n 1) /usr/bin/ntfy-send && \
-    chmod +x /usr/bin/ntfy-send && \
+    cp /tmp/ntfy-send/ntfy-send.sh /usr/bin/ntfy-send && \
+    chmod 755 /usr/bin/ntfy-send && \
     mkdir -p /etc/ntfy-send && \
-    if [ -f /tmp/ntfy-send/.env.example ]; then cp /tmp/ntfy-send/.env.example /etc/ntfy-send/.env; fi && \
-    chmod 644 /etc/ntfy-send/.env 2>/dev/null || true && \
+    cp /tmp/ntfy-send/.env.example /etc/ntfy-send/.env && \
+    chmod 644 /etc/ntfy-send/.env && \
     rm -rf /tmp/ntfy-send
 
 # Python deps
