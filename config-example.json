@@ -6,7 +6,11 @@
 
   "notification-type": "ntfy",
 
-  "ntfy-topic": "my-backup-topic",
+  "ntfy-user": "dein_user",
+  "ntfy-password": "dein_passwort",
+  "ntfy-server": "https://example.tld",
+  "ntfy-topic": "hades-notifications",
+  "ntfy-env-file": "/app/.ntfy.env",
 
   "smtp-host": "",
   "smtp-port": 587,
