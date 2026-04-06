@@ -18,9 +18,19 @@ ntfy – lightweight push notifications via a simple HTTP-based system
 SMTP (Email) – traditional email notifications for detailed reporting
 The system is designed in a modular way, making it easy to extend or adapt to additional notification providers in the future.
 
-##### Features of the Notification System
+### Features of the Notification System
 * 📢 Notifications on startup, shutdown, and snapshot execution
 * ⏭️ Notifications when a run is skipped (e.g. no matching servers found)
 * ✅ Clear success and error reporting after each run
 * ⚙️ Configurable via environment variables
 * 🔄 Asynchronous sending to avoid blocking the main process
+
+## Setup (Quick Overview)
+The notification system is configured entirely via environment variables:
+
+##### Enable Notifications
+```
+Environment
+NOTIFICATION_TYPE=ntfy,smtp
+```
+You can enable one or multiple providers by separating them with a comma.
