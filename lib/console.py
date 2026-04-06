@@ -7,6 +7,10 @@ class Console:
         return time.strftime("%Y-%m-%d %H:%M:%S")
 
     @classmethod
+    def success(cls, msg):
+        print(f"[{cls._ts()}] [SUCCESS] {msg}", flush=True)
+
+    @classmethod
     def info(cls, msg):
         print(f"[{cls._ts()}] [INFO] {msg}", flush=True)
 

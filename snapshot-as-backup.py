@@ -111,7 +111,7 @@ def get_servers(page=1):
     r = requests.get(url=url, headers=headers)
 
     if not r.ok:
-        print(f"Servers Page #{page} failed: {r.reason}")
+        Console.error(f"Servers Page #{page} failed: {r.reason}")
         exit_code = 1
         return
 
@@ -149,10 +149,10 @@ def create_snapshot(server_id, snapshot_desc):
     )
 
     if not r.ok:
-        print(f"Snapshot failed for server {server_id}")
+        Console.error(f"Snapshot failed for server {server_id}")
         exit_code = 1
     else:
-        print(f"Snapshot created for server {server_id}")
+        Console.success(f"Snapshot created for server {server_id}")
 
 
 def get_snapshots(page=1):
@@ -162,7 +162,7 @@ def get_snapshots(page=1):
     r = requests.get(url=url, headers=headers)
 
     if not r.ok:
-        print(f"Snapshots Page #{page} failed")
+        Console.error(f"Snapshots Page #{page} failed")
         exit_code = 1
         return
 
@@ -184,7 +184,7 @@ def delete_snapshots(snapshot_id, server_id):
     r = requests.delete(url=url, headers=headers)
 
     if not r.ok:
-        print(f"Delete failed #{snapshot_id}")
+        Console.error(f"Delete failed #{snapshot_id}")
         exit_code = 1
 
 
@@ -206,9 +206,11 @@ def run():
     start_time = time.strftime("%Y-%m-%d %H:%M:%S")
 
     async_notify(
-        f"[{hostname}] Backup started",
+        f"[{hostname}] Snapshot started",
         f"Backup started\nTime: {start_time}",
     )
+
+    Console.success("Snapshot job started at {start_time}")
 
     exit_code = 0
 
@@ -239,6 +241,10 @@ def run():
     async_notify(
         f"[{hostname}] Backup {status}",
         f"{status}\nServers: {len(servers)}\nStart: {start_time}\nEnd: {end_time}",
+    )
+
+    Console.success(
+        "Job status: {status} -> Servers: {len(servers)} | Start: {start_time} -> End: {end_time}"
     )
 
 
