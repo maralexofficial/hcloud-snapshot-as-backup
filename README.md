@@ -1,7 +1,7 @@
 # Table of contents
 
 * [Preface](#preface)
-* [About this fork](#about-this-fork)
+* [About this repo](#about-this-repo)
 * [Installation](#installation)
 * [Quick Overview](#quick-overview)
 * [Authors](#authors)
@@ -18,7 +18,7 @@ If you find this project useful, I strongly encourage you to check out the origi
 For any issues, bugs, or questions specifically related to this fork, please open an issue here in this repository.
 Kindly avoid contacting or burdening the original author with problems related to this fork, as they are not responsible for the changes or behavior introduced here.
 
-# About this fork
+# About this repo
 The most significant enhancement in this fork compared to the original project is the extended notification system.
 While the original implementation focuses primarily on snapshot creation and cleanup, this fork introduces a flexible and extensible notification layer that allows you to stay informed about the container’s activity in real time.
 Notification System
