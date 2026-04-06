@@ -218,9 +218,11 @@ if __name__ == '__main__':
 
         notification_type = os.environ.get('NOTIFICATION_TYPE', '').lower()
 
+        ntfy_topic = os.environ.get('NTFY_TOPIC', 'DEFAULT')
+
         if not notification_type or "ntfy" in notification_type:
             ntfy_bin = os.environ.get('NTFY_BIN', "/usr/bin/ntfy-send")
-            notifier.register(NtfyProvider(True, ntfy_bin))
+            notifier.register(NtfyProvider(True, ntfy_bin, topic=ntfy_topic))
 
         if not notification_type or "smtp" in notification_type:
             notifier.register(SMTPProvider(
@@ -269,10 +271,13 @@ if __name__ == '__main__':
 
         notification_type = config.get('notification-type', '').lower()
 
+        ntfy_topic = config.get('ntfy-topic', 'DEFAULT')
+
         if not notification_type or "ntfy" in notification_type:
             notifier.register(NtfyProvider(
                 True,
-                config.get('ntfy-bin', "/usr/bin/ntfy-send")
+                config.get('ntfy-bin', "/usr/bin/ntfy-send"),
+                topic=ntfy_topic
             ))
 
         if not notification_type or "smtp" in notification_type:
