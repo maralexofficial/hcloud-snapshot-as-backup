@@ -242,6 +242,18 @@ def run():
 
     get_servers()
 
+    if not servers:
+       message = f"No servers found with label        '{label_selector}'. Skipping run."
+    
+      Console.error(message)
+
+    async_notify(
+        f"[{hostname}] Backup skipped",
+        message
+    )
+
+    return
+
     for server in servers:
         create_snapshot(
             server,
