@@ -1,8 +1,7 @@
-version: '3.3'
-
 services:
     app:
-      image: fbrettnich/hcloud-snapshot-as-backup
+      build: .
+      image: maralexofficial/hcloud-snapshot-as-backup
       restart: unless-stopped
       volumes:
         - /etc/localtime:/etc/localtime:ro
