@@ -30,21 +30,21 @@ The notification system is configured entirely via environment variables:
 
 ##### Enable Notifications
 ```
-Environment
 NOTIFICATION_TYPE=ntfy,smtp
 ```
 You can enable one or multiple providers by separating them with a comma.
 
 ##### ntfy Configuration
 ```
-Environment
-NTFY_BIN=/usr/bin/ntfy-send
-NTFY_TOPIC=your-topic
+NTFY_USER=dein_user
+NTFY_PASSWORD=dein_passwort
+NTFY_SERVER=https://example.tld
+NTFY_TOPIC=hades-notifications
+NTFY_ENV_FILE=/app/.ntfy.env
 ```
 
 ##### SMTP Configuration
 ```
-Environment
 SMTP_HOST=smtp.example.com
 SMTP_PORT=587
 SMTP_USER=your-user
