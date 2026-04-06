@@ -293,6 +293,11 @@ if __name__ == "__main__":
 
         humanizedCron = CronHumanizer.describe(cron_string)
 
+        async_notify(
+            f"[{hostname}] Backup",
+            f"Cron scheduler started -> {humanizedCron} ({cron_string})",
+        )
+
         Console.success(f"Cron scheduler started -> {humanizedCron} ({cron_string})")
 
         while True:
