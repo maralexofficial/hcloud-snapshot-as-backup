@@ -13,6 +13,8 @@ from lib.notifications import NotificationManager
 from lib.providers.ntfy import NtfyProvider
 from lib.providers.smtp import SMTPProvider
 
+from lib.helpers.notify import notify
+
 from lib.hetzner_api import HetznerAPI
 from lib.snapshot_manager import SnapshotManager
 
@@ -38,14 +40,6 @@ exit_code = 0
 notifier = None
 
 hostname = os.environ.get("HOSTNAME") or socket.gethostname()
-
-
-def notify(title, message):
-    if notifier:
-        try:
-            notifier.send(message, title)
-        except Exception as e:
-            Console.error(f"[ntfy] send failed: {e}")
 
 
 def handle_stop(signum, frame):
@@ -118,7 +112,7 @@ def run():
     if not servers:
         message = f"No servers found with label '{label_selector}'. Skipping run."
         Console.error(message)
-        notify(f"[{hostname}] Snapshot skipped", message)
+        notify(notifier, f"[{hostname}] Snapshot skipped", message)
         return
 
     snapshot_manager.run_snapshots(servers, snapshot_name)
@@ -134,6 +128,7 @@ def run():
     status = "Success" if exit_code == 0 else "Error"
 
     notify(
+        notifier,
         f"[{hostname}] Snapshot job {status}",
         f"Snapshot job status: {status}\nServers: {len(servers)}\nStart: {start_time}\nEnd: {end_time}",
     )
