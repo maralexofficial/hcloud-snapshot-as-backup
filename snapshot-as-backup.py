@@ -290,6 +290,8 @@ if __name__ == "__main__":
 
         cron_scheduler = CronScheduler(cron_string)
 
+        Console.success("CRON in container is set to: {cron_string}")
+
         while True:
             if cron_scheduler.time_for_execution():
                 run()
