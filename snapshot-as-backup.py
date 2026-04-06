@@ -113,6 +113,7 @@ def send_startup_notification(cron_string=None):
     )
 
     Console.info("Service started successfully")
+    Console.info(f"{cron_info}")
 
 
 def get_servers(page=1):
