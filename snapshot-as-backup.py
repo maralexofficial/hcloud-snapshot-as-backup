@@ -16,11 +16,25 @@ api_token = ""
 snapshot_name = ""
 label_selector = ""
 keep_last_default = 3
+
 headers = {}
 servers = {}
 servers_keep_last = {}
 snapshot_list = {}
 exit_code = 0
+
+# notifier
+notifier = None
+
+
+def send_startup_notification():
+    if not notifier:
+        return
+
+    notifier.send(
+        f"Container gestartet\nZeit: {time.strftime('%Y-%m-%d %H:%M:%S')}",
+        "Backup Service gestartet"
+    )
 
 
 def get_servers(page=1):
@@ -32,7 +46,6 @@ def get_servers(page=1):
         print(f"Servers Page #{page} could not be retrieved: {r.reason}")
         print(r.text)
         exit_code = 1
-
     else:
         r = r.json()
         np = r['meta']['pagination']['next_page']
@@ -55,6 +68,7 @@ def get_servers(page=1):
 
 def create_snapshot(server_id, snapshot_desc):
     global exit_code
+
     url = base_url + "/servers/" + str(server_id) + "/actions/create_image"
     r = requests.post(
         url=url,
@@ -73,6 +87,7 @@ def create_snapshot(server_id, snapshot_desc):
 
 def get_snapshots(page=1):
     global exit_code
+
     url = base_url + f"/images?type=snapshot&label_selector={label_selector}&page=" + str(page)
     r = requests.get(url=url, headers=headers)
 
@@ -80,16 +95,16 @@ def get_snapshots(page=1):
         print(f"Snapshots Page #{page} could not be retrieved: {r.reason}")
         print(r.text)
         exit_code = 1
-
     else:
         r = r.json()
         np = r['meta']['pagination']['next_page']
 
         for i in r['images']:
-            if i['created_from']['id'] in snapshot_list:
-                snapshot_list[i['created_from']['id']].append(i['id'])
+            sid = i['created_from']['id']
+            if sid in snapshot_list:
+                snapshot_list[sid].append(i['id'])
             else:
-                snapshot_list[i['created_from']['id']] = [i['id']]
+                snapshot_list[sid] = [i['id']]
 
         if np is not None:
             get_snapshots(np)
@@ -98,21 +113,19 @@ def get_snapshots(page=1):
 def cleanup_snapshots():
     for k in snapshot_list:
         si = snapshot_list[k]
-        keep_last = keep_last_default
-
-        if k in servers_keep_last:
-            keep_last = servers_keep_last[k]
+        keep_last = servers_keep_last.get(k, keep_last_default)
 
         if len(si) > keep_last:
             si.sort(reverse=True)
-            si = si[keep_last:]
+            to_delete = si[keep_last:]
 
-            for s in si:
+            for s in to_delete:
                 delete_snapshots(snapshot_id=s, server_id=k)
 
 
 def delete_snapshots(snapshot_id, server_id):
     global exit_code
+
     url = base_url + "/images/" + str(snapshot_id)
     r = requests.delete(url=url, headers=headers)
 
@@ -125,14 +138,27 @@ def delete_snapshots(snapshot_id, server_id):
 
 
 def run():
-    global exit_code
+    global exit_code, notifier
+
     if api_token is None:
         print("API token is missing... Exit.")
         sys.exit(1)
 
+    start_time = time.strftime('%Y-%m-%d %H:%M:%S')
+
+    # ▶️ START NOTIFICATION (Backup)
+    if notifier:
+        notifier.send(
+            f"Backup gestartet\nZeit: {start_time}",
+            "Backup gestartet"
+        )
+
+    exit_code = 0
+
     servers.clear()
     servers_keep_last.clear()
     snapshot_list.clear()
+
     headers['Content-Type'] = "application/json"
     headers['Authorization'] = "Bearer " + api_token
 
@@ -159,6 +185,26 @@ def run():
 
     cleanup_snapshots()
 
+    # 🔔 END NOTIFICATION
+    end_time = time.strftime('%Y-%m-%d %H:%M:%S')
+
+    if exit_code == 0:
+        title = "Backup erfolgreich"
+        status = "Erfolgreich"
+    else:
+        title = "Backup FEHLGESCHLAGEN"
+        status = "Fehler"
+
+    msg = (
+        f"{status}\n"
+        f"Server: {len(servers)}\n"
+        f"Start: {start_time}\n"
+        f"Ende: {end_time}"
+    )
+
+    if notifier:
+        notifier.send(msg, title)
+
 
 if __name__ == '__main__':
 
@@ -169,6 +215,29 @@ if __name__ == '__main__':
         snapshot_name = os.environ.get('SNAPSHOT_NAME', "%name%-%timestamp%")
         label_selector = os.environ.get('LABEL_SELECTOR', 'AUTOBACKUP')
         keep_last_default = int(os.environ.get('KEEP_LAST', 3))
+
+        notifier = NotificationManager()
+
+        # ntfy
+        ntfy_enabled = str(os.environ.get('NTFY_NOTIFY', 'false')).lower() == "true"
+        ntfy_bin = os.environ.get('NTFY_BIN', "/usr/bin/ntfy-send")
+        notifier.register(NtfyProvider(ntfy_enabled, ntfy_bin))
+
+        # smtp
+        smtp_enabled = str(os.environ.get('SMTP_NOTIFY', 'false')).lower() == "true"
+        notifier.register(SMTPProvider(
+            enabled=smtp_enabled,
+            host=os.environ.get('SMTP_HOST'),
+            port=int(os.environ.get('SMTP_PORT', 587)),
+            user=os.environ.get('SMTP_USER'),
+            password=os.environ.get('SMTP_PASS'),
+            sender=os.environ.get('SMTP_FROM'),
+            receiver=os.environ.get('SMTP_TO'),
+            tls=str(os.environ.get('SMTP_TLS', 'true')).lower() == "true"
+        ))
+
+        # ▶️ STARTUP NOTIFICATION (once)
+        send_startup_notification()
 
         cron_string = os.environ.get('CRON', '0 1 * * *')
 
@@ -198,6 +267,27 @@ if __name__ == '__main__':
         snapshot_name = config['snapshot-name']
         label_selector = config['label-selector']
         keep_last_default = int(config['keep-last'])
+
+        notifier = NotificationManager()
+
+        notifier.register(NtfyProvider(
+            config.get('ntfy-notify', False),
+            config.get('ntfy-bin', "/usr/bin/ntfy-send")
+        ))
+
+        notifier.register(SMTPProvider(
+            enabled=config.get('smtp-notify', False),
+            host=config.get('smtp-host'),
+            port=config.get('smtp-port', 587),
+            user=config.get('smtp-user'),
+            password=config.get('smtp-pass'),
+            sender=config.get('smtp-from'),
+            receiver=config.get('smtp-to'),
+            tls=config.get('smtp-tls', True)
+        ))
+
+        # ▶️ STARTUP NOTIFICATION (once)
+        send_startup_notification()
 
         run()
         sys.exit(exit_code)
