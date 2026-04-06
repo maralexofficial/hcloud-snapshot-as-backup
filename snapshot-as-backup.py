@@ -105,7 +105,7 @@ def send_startup_notification(cron_string=None):
     else:
         cron_info = "\nSchedule: manual run"
 
-    message = f"Container started\n" f"Time: {now}" f"{cron_info}"
+    message = f"Container started\nTime: {now}{cron_info}"
 
     async_notify(
         f"[{hostname}] Service started successfully",
@@ -113,7 +113,7 @@ def send_startup_notification(cron_string=None):
     )
 
     Console.info("Service started successfully")
-    Console.info(f"{cron_info}")
+    Console.info(cron_info)
 
 
 def get_servers(page=1):
@@ -215,6 +215,10 @@ def cleanup_snapshots():
 def run():
     global exit_code
 
+    if not api_token:
+        Console.error("API_TOKEN is missing. Aborting run.")
+        return
+
     start_time = time.strftime("%Y-%m-%d %H:%M:%S")
 
     async_notify(
@@ -267,9 +271,9 @@ if __name__ == "__main__":
     if IN_DOCKER_CONTAINER:
         api_token = os.environ.get("API_TOKEN")
 
-    if not api_token or not api_token.strip():
-    Console.error("API_TOKEN is missing or empty. Exiting container.")
-    sys.exit(1)
+        if not api_token:
+            Console.error("API_TOKEN is not set. Exiting container.")
+            sys.exit(1)
 
         snapshot_name = os.environ.get("SNAPSHOT_NAME", "%name%-%timestamp%")
         label_selector = os.environ.get("LABEL_SELECTOR", "AUTOBACKUP")
@@ -299,14 +303,13 @@ if __name__ == "__main__":
 
         cron_string = os.environ.get("CRON", "0 1 * * *")
 
+        send_startup_notification(cron_string)
+
         if cron_string.lower() == "false":
-            send_startup_notification()
             run()
             sys.exit(exit_code)
 
         cron_scheduler = CronScheduler(cron_string)
-
-        send_startup_notification(cron_string)
 
         while True:
             if cron_scheduler.time_for_execution():
