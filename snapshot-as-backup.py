@@ -209,7 +209,6 @@ if __name__ == '__main__':
     IN_DOCKER_CONTAINER = os.environ.get('IN_DOCKER_CONTAINER', False)
 
     if IN_DOCKER_CONTAINER:
-
         api_token = os.environ.get('API_TOKEN')
         snapshot_name = os.environ.get('SNAPSHOT_NAME', "%name%-%timestamp%")
         label_selector = os.environ.get('LABEL_SELECTOR', 'AUTOBACKUP')
@@ -220,14 +219,12 @@ if __name__ == '__main__':
         notification_type = os.environ.get('NOTIFICATION_TYPE', '').lower()
 
         if not notification_type or "ntfy" in notification_type:
-            ntfy_enabled = str(os.environ.get('NTFY_NOTIFY', 'false')).lower() == "true"
             ntfy_bin = os.environ.get('NTFY_BIN', "/usr/bin/ntfy-send")
-            notifier.register(NtfyProvider(ntfy_enabled, ntfy_bin))
+            notifier.register(NtfyProvider(True, ntfy_bin))
 
         if not notification_type or "smtp" in notification_type:
-            smtp_enabled = str(os.environ.get('SMTP_NOTIFY', 'false')).lower() == "true"
             notifier.register(SMTPProvider(
-                enabled=smtp_enabled,
+                enabled=True,
                 host=os.environ.get('SMTP_HOST'),
                 port=int(os.environ.get('SMTP_PORT', 587)),
                 user=os.environ.get('SMTP_USER'),
@@ -274,13 +271,13 @@ if __name__ == '__main__':
 
         if not notification_type or "ntfy" in notification_type:
             notifier.register(NtfyProvider(
-                config.get('ntfy-notify', False),
+                True,
                 config.get('ntfy-bin', "/usr/bin/ntfy-send")
             ))
 
         if not notification_type or "smtp" in notification_type:
             notifier.register(SMTPProvider(
-                enabled=config.get('smtp-notify', False),
+                enabled=True,
                 host=config.get('smtp-host'),
                 port=config.get('smtp-port', 587),
                 user=config.get('smtp-user'),
