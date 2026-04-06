@@ -4,7 +4,8 @@ RUN apk add --no-cache \
     tzdata \
     git \
     bash \
-    curl
+    curl \
+    su-exec
 
 WORKDIR /app
 
@@ -17,10 +18,11 @@ RUN adduser \
     --uid "10001" \
     app
 
-RUN git clone https://github.com/maralexofficial/ntfy-send.git /tmp/ntfy-send && \
-    cp /tmp/ntfy-send/ntfy-send.sh /usr/bin/ntfy-send && \
-    chmod 755 /usr/bin/ntfy-send && \
-    mkdir -p /etc/ntfy-send && \
+RUN mkdir -p /app && chown -R 10001:10001 /app
+
+RUN git clone https://github.com/maralexofficial/ntfy-send.git /tmp/ntfy-send &&
+    cp /tmp/ntfy-send/ntfy-send.sh /usr/bin/ntfy-send &&
+    chmod 755 /usr/bin/ntfy-send &&
     rm -rf /tmp/ntfy-send
 
 COPY entrypoint.sh /entrypoint.sh
