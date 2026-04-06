@@ -2,5 +2,17 @@
   "api-token": "",
   "snapshot-name": "%name%-%timestamp%",
   "label-selector": "AUTOBACKUP",
-  "keep-last": 3
+  "keep-last": 3,
+
+  "ntfy-notify": true,
+  "ntfy-bin": "/usr/bin/ntfy-send",
+
+  "smtp-notify": false,
+  "smtp-host": "",
+  "smtp-port": 587,
+  "smtp-user": "",
+  "smtp-pass": "",
+  "smtp-from": "",
+  "smtp-to": "",
+  "smtp-tls": true
 }
