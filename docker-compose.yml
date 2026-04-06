@@ -1,5 +1,6 @@
 services:
     app:
+      container_name: hcloud-snapshot
       build: .
       image: maralexofficial/hcloud-snapshot-as-backup
       restart: unless-stopped
