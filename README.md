@@ -97,7 +97,9 @@ SMTP_TLS=true
 ```
 
 # Authors
-soon
+
+* [fbrettnich](https://github.com/fbrettnich/hcloud-snapshot-as-backup) (Original author)
+* [maralexofficial](https://github.com/maralexofficial) (Fork author)
 
 # License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
