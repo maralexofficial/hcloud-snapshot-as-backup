@@ -210,13 +210,6 @@ def run():
 
     start_time = time.strftime("%Y-%m-%d %H:%M:%S")
 
-    notify(
-        f"[{hostname}] Snapshot started",
-        f"Backup started\nTime: {start_time}",
-    )
-
-    Console.success(f"Snapshot job started at {start_time}")
-
     exit_code = 0
 
     servers.clear()
@@ -234,7 +227,7 @@ def run():
         Console.error(message)
 
         notify(
-            f"[{hostname}] Backup skipped",
+            f"[{hostname}] Snapshot skipped",
             message
         )
 
@@ -256,12 +249,12 @@ def run():
     status = "Success" if exit_code == 0 else "Error"
 
     notify(
-        f"[{hostname}] Backup {status}",
+        f"[{hostname}] Snapshot job {status}",
         f"{status}\nServers: {len(servers)}\nStart: {start_time}\nEnd: {end_time}",
     )
 
-    Console.success(
-        f"Job status: {status} -> Servers: {len(servers)} | Start: {start_time} -> End: {end_time}"
+    Console.info(
+        f"Snapshot status: {status} -> Servers: {len(servers)} | Start: {start_time} -> End: {end_time}"
     )
 
 
