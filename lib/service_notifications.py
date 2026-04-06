@@ -3,15 +3,6 @@ import time
 from lib.console import Console
 from lib.cron_humanizer import CronHumanizer
 
-
-def notify(title, message):
-    if notifier:
-        try:
-            notifier.send(message, title)
-        except Exception as e:
-            Console.error(f"[ntfy] send failed: {e}")
-
-
 def send_stop_notification(notify, hostname):
     now = time.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -23,7 +14,7 @@ def send_stop_notification(notify, hostname):
     Console.success("Service stopped successfully")
 
 
-def send_start_notification(cron_string=None):
+def send_start_notification(cron_string=None, notify, hostname):
     now = time.strftime("%Y-%m-%d %H:%M:%S")
 
     if cron_string and cron_string.lower() != "false":
