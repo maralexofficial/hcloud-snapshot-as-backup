@@ -27,6 +27,34 @@ exit_code = 0
 notifier = None
 
 
+def setup_notifications(notification_type, notifier, ntfy_config=None, smtp_config=None):
+    notification_type = (notification_type or "").lower().strip()
+
+    if not notification_type:
+        return
+
+    types = [t.strip() for t in notification_type.split(",")]
+
+    if "ntfy" in types and ntfy_config:
+        notifier.register(NtfyProvider(
+            True,
+            ntfy_config["bin"],
+            topic=ntfy_config["topic"]
+        ))
+
+    if "smtp" in types and smtp_config:
+        notifier.register(SMTPProvider(
+            enabled=True,
+            host=smtp_config["host"],
+            port=smtp_config["port"],
+            user=smtp_config["user"],
+            password=smtp_config["password"],
+            sender=smtp_config["sender"],
+            receiver=smtp_config["receiver"],
+            tls=smtp_config["tls"]
+        ))
+
+
 def send_startup_notification():
     if not notifier or not notifier.providers:
         return
@@ -216,25 +244,25 @@ if __name__ == '__main__':
 
         notifier = NotificationManager()
 
-        notification_type = os.environ.get('NOTIFICATION_TYPE', '').lower()
+        notification_type = os.environ.get('NOTIFICATION_TYPE', '')
 
-        ntfy_topic = os.environ.get('NTFY_TOPIC', 'DEFAULT')
-
-        if not notification_type or "ntfy" in notification_type:
-            ntfy_bin = os.environ.get('NTFY_BIN', "/usr/bin/ntfy-send")
-            notifier.register(NtfyProvider(True, ntfy_bin, topic=ntfy_topic))
-
-        if not notification_type or "smtp" in notification_type:
-            notifier.register(SMTPProvider(
-                enabled=True,
-                host=os.environ.get('SMTP_HOST'),
-                port=int(os.environ.get('SMTP_PORT', 587)),
-                user=os.environ.get('SMTP_USER'),
-                password=os.environ.get('SMTP_PASS'),
-                sender=os.environ.get('SMTP_FROM'),
-                receiver=os.environ.get('SMTP_TO'),
-                tls=str(os.environ.get('SMTP_TLS', 'true')).lower() == "true"
-            ))
+        setup_notifications(
+            notification_type,
+            notifier,
+            ntfy_config={
+                "bin": os.environ.get('NTFY_BIN', "/usr/bin/ntfy-send"),
+                "topic": os.environ.get('NTFY_TOPIC', 'DEFAULT')
+            },
+            smtp_config={
+                "host": os.environ.get('SMTP_HOST'),
+                "port": int(os.environ.get('SMTP_PORT', 587)),
+                "user": os.environ.get('SMTP_USER'),
+                "password": os.environ.get('SMTP_PASS'),
+                "sender": os.environ.get('SMTP_FROM'),
+                "receiver": os.environ.get('SMTP_TO'),
+                "tls": str(os.environ.get('SMTP_TLS', 'true')).lower() == "true"
+            }
+        )
 
         send_startup_notification()
 
@@ -269,28 +297,25 @@ if __name__ == '__main__':
 
         notifier = NotificationManager()
 
-        notification_type = config.get('notification-type', '').lower()
+        notification_type = config.get('notification-type', '')
 
-        ntfy_topic = config.get('ntfy-topic', 'DEFAULT')
-
-        if not notification_type or "ntfy" in notification_type:
-            notifier.register(NtfyProvider(
-                True,
-                config.get('ntfy-bin', "/usr/bin/ntfy-send"),
-                topic=ntfy_topic
-            ))
-
-        if not notification_type or "smtp" in notification_type:
-            notifier.register(SMTPProvider(
-                enabled=True,
-                host=config.get('smtp-host'),
-                port=config.get('smtp-port', 587),
-                user=config.get('smtp-user'),
-                password=config.get('smtp-pass'),
-                sender=config.get('smtp-from'),
-                receiver=config.get('smtp-to'),
-                tls=config.get('smtp-tls', True)
-            ))
+        setup_notifications(
+            notification_type,
+            notifier,
+            ntfy_config={
+                "bin": config.get('ntfy-bin', "/usr/bin/ntfy-send"),
+                "topic": config.get('ntfy-topic', 'DEFAULT')
+            },
+            smtp_config={
+                "host": config.get('smtp-host'),
+                "port": config.get('smtp-port', 587),
+                "user": config.get('smtp-user'),
+                "password": config.get('smtp-pass'),
+                "sender": config.get('smtp-from'),
+                "receiver": config.get('smtp-to'),
+                "tls": config.get('smtp-tls', True)
+            }
+        )
 
         send_startup_notification()
 
