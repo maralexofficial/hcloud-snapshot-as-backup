@@ -16,6 +16,7 @@ from lib.notifications import NotificationManager
 from lib.providers.ntfy import NtfyProvider
 from lib.providers.smtp import SMTPProvider
 
+# Timezone fix
 os.environ["TZ"] = os.environ.get("TZ", "Europe/Berlin")
 time.tzset()
 
@@ -60,7 +61,6 @@ def handle_stop(signum, frame):
         f"[{hostname}] Service stopped successfully",
         f"Container stopped\nTime: {time.strftime('%Y-%m-%d %H:%M:%S')}",
     )
-
     time.sleep(2)
     sys.exit(0)
 
@@ -69,9 +69,7 @@ signal.signal(signal.SIGTERM, handle_stop)
 signal.signal(signal.SIGINT, handle_stop)
 
 
-def setup_notifications(
-    notification_type, notifier, ntfy_config=None, smtp_config=None
-):
+def setup_notifications(notification_type, notifier, ntfy_config=None, smtp_config=None):
     notification_type = (notification_type or "").lower().strip()
 
     if not notification_type:
@@ -242,17 +240,18 @@ def run():
 
     get_servers()
 
+    # ✅ NO SERVERS HANDLING
     if not servers:
-       message = f"No servers found with label        '{label_selector}'. Skipping run."
-    
-      Console.error(message)
+        message = f"No servers found with label '{label_selector}'. Skipping run."
 
-    async_notify(
-        f"[{hostname}] Backup skipped",
-        message
-    )
+        Console.error(message)
 
-    return
+        async_notify(
+            f"[{hostname}] Backup skipped",
+            message
+        )
+
+        return
 
     for server in servers:
         create_snapshot(
