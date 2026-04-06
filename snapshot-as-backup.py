@@ -8,7 +8,7 @@ import requests
 import os.path
 from cron_validator import CronScheduler
 
-from lib.providers.notifications import NotificationManager
+from lib.notifications import NotificationManager
 from lib.providers.ntfy import NtfyProvider
 from lib.providers.smtp import SMTPProvider
 
