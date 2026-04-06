@@ -4,6 +4,7 @@ import os
 import sys
 import json
 import time
+import socket
 import requests
 import os.path
 from cron_validator import CronScheduler
@@ -26,8 +27,12 @@ exit_code = 0
 
 notifier = None
 
+hostname = socket.gethostname()
 
-def setup_notifications(notification_type, notifier, ntfy_config=None, smtp_config=None):
+
+def setup_notifications(
+    notification_type, notifier, ntfy_config=None, smtp_config=None
+):
     notification_type = (notification_type or "").lower().strip()
 
     if not notification_type:
@@ -36,23 +41,23 @@ def setup_notifications(notification_type, notifier, ntfy_config=None, smtp_conf
     types = [t.strip() for t in notification_type.split(",")]
 
     if "ntfy" in types and ntfy_config:
-        notifier.register(NtfyProvider(
-            True,
-            ntfy_config["bin"],
-            topic=ntfy_config["topic"]
-        ))
+        notifier.register(
+            NtfyProvider(True, ntfy_config["bin"], topic=ntfy_config["topic"])
+        )
 
     if "smtp" in types and smtp_config:
-        notifier.register(SMTPProvider(
-            enabled=True,
-            host=smtp_config["host"],
-            port=smtp_config["port"],
-            user=smtp_config["user"],
-            password=smtp_config["password"],
-            sender=smtp_config["sender"],
-            receiver=smtp_config["receiver"],
-            tls=smtp_config["tls"]
-        ))
+        notifier.register(
+            SMTPProvider(
+                enabled=True,
+                host=smtp_config["host"],
+                port=smtp_config["port"],
+                user=smtp_config["user"],
+                password=smtp_config["password"],
+                sender=smtp_config["sender"],
+                receiver=smtp_config["receiver"],
+                tls=smtp_config["tls"],
+            )
+        )
 
 
 def send_startup_notification():
@@ -60,8 +65,8 @@ def send_startup_notification():
         return
 
     notifier.send(
-        f"Container gestartet\nZeit: {time.strftime('%Y-%m-%d %H:%M:%S')}",
-        "Backup Service gestartet"
+        f"Container started\nTime: {time.strftime('%Y-%m-%d %H:%M:%S')}",
+        f"[{hostname}][HCLOUD] Service started successfully",
     )
 
 
@@ -76,19 +81,19 @@ def get_servers(page=1):
         exit_code = 1
     else:
         r = r.json()
-        np = r['meta']['pagination']['next_page']
+        np = r["meta"]["pagination"]["next_page"]
 
-        for s in r['servers']:
-            servers[s['id']] = s
+        for s in r["servers"]:
+            servers[s["id"]] = s
 
             keep_last = keep_last_default
-            if f"{label_selector}.KEEP-LAST" in s['labels']:
-                keep_last = int(s['labels'][f"{label_selector}.KEEP-LAST"])
+            if f"{label_selector}.KEEP-LAST" in s["labels"]:
+                keep_last = int(s["labels"][f"{label_selector}.KEEP-LAST"])
 
             if keep_last < 1:
                 keep_last = 1
 
-            servers_keep_last[s['id']] = keep_last
+            servers_keep_last[s["id"]] = keep_last
 
         if np is not None:
             get_servers(np)
@@ -100,8 +105,12 @@ def create_snapshot(server_id, snapshot_desc):
     url = base_url + "/servers/" + str(server_id) + "/actions/create_image"
     r = requests.post(
         url=url,
-        json={"description": snapshot_desc, "type": "snapshot", "labels": {f"{label_selector}": ""}},
-        headers=headers
+        json={
+            "description": snapshot_desc,
+            "type": "snapshot",
+            "labels": {f"{label_selector}": ""},
+        },
+        headers=headers,
     )
 
     if not r.ok:
@@ -109,14 +118,18 @@ def create_snapshot(server_id, snapshot_desc):
         print(r.text)
         exit_code = 1
     else:
-        image_id = r.json()['image']['id']
+        image_id = r.json()["image"]["id"]
         print(f"Snapshot #{image_id} (Server #{server_id}) has been created")
 
 
 def get_snapshots(page=1):
     global exit_code
 
-    url = base_url + f"/images?type=snapshot&label_selector={label_selector}&page=" + str(page)
+    url = (
+        base_url
+        + f"/images?type=snapshot&label_selector={label_selector}&page="
+        + str(page)
+    )
     r = requests.get(url=url, headers=headers)
 
     if not r.ok:
@@ -125,14 +138,14 @@ def get_snapshots(page=1):
         exit_code = 1
     else:
         r = r.json()
-        np = r['meta']['pagination']['next_page']
+        np = r["meta"]["pagination"]["next_page"]
 
-        for i in r['images']:
-            sid = i['created_from']['id']
+        for i in r["images"]:
+            sid = i["created_from"]["id"]
             if sid in snapshot_list:
-                snapshot_list[sid].append(i['id'])
+                snapshot_list[sid].append(i["id"])
             else:
-                snapshot_list[sid] = [i['id']]
+                snapshot_list[sid] = [i["id"]]
 
         if np is not None:
             get_snapshots(np)
@@ -158,7 +171,9 @@ def delete_snapshots(snapshot_id, server_id):
     r = requests.delete(url=url, headers=headers)
 
     if not r.ok:
-        print(f"Snapshot #{snapshot_id} (Server #{server_id}) could not be deleted: {r.reason}")
+        print(
+            f"Snapshot #{snapshot_id} (Server #{server_id}) could not be deleted: {r.reason}"
+        )
         print(r.text)
         exit_code = 1
     else:
@@ -172,13 +187,10 @@ def run():
         print("API token is missing... Exit.")
         sys.exit(1)
 
-    start_time = time.strftime('%Y-%m-%d %H:%M:%S')
+    start_time = time.strftime("%Y-%m-%d %H:%M:%S")
 
     if notifier:
-        notifier.send(
-            f"Backup gestartet\nZeit: {start_time}",
-            "Backup gestartet"
-        )
+        notifier.send(f"Backup gestartet\nZeit: {start_time}", "Backup gestartet")
 
     exit_code = 0
 
@@ -186,8 +198,8 @@ def run():
     servers_keep_last.clear()
     snapshot_list.clear()
 
-    headers['Content-Type'] = "application/json"
-    headers['Authorization'] = "Bearer " + api_token
+    headers["Content-Type"] = "application/json"
+    headers["Authorization"] = "Bearer " + api_token
 
     get_servers()
 
@@ -199,10 +211,10 @@ def run():
             server_id=server,
             snapshot_desc=str(snapshot_name)
             .replace("%id%", str(server))
-            .replace("%name%", servers[server]['name'])
+            .replace("%name%", servers[server]["name"])
             .replace("%timestamp%", str(int(time.time())))
             .replace("%date%", str(time.strftime("%Y-%m-%d")))
-            .replace("%time%", str(time.strftime("%H:%M:%S")))
+            .replace("%time%", str(time.strftime("%H:%M:%S"))),
         )
 
     get_snapshots()
@@ -212,7 +224,7 @@ def run():
 
     cleanup_snapshots()
 
-    end_time = time.strftime('%Y-%m-%d %H:%M:%S')
+    end_time = time.strftime("%Y-%m-%d %H:%M:%S")
 
     if exit_code == 0:
         title = "Backup erfolgreich"
@@ -232,43 +244,43 @@ def run():
         notifier.send(msg, title)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
-    IN_DOCKER_CONTAINER = os.environ.get('IN_DOCKER_CONTAINER', False)
+    IN_DOCKER_CONTAINER = os.environ.get("IN_DOCKER_CONTAINER", False)
 
     if IN_DOCKER_CONTAINER:
-        api_token = os.environ.get('API_TOKEN')
-        snapshot_name = os.environ.get('SNAPSHOT_NAME', "%name%-%timestamp%")
-        label_selector = os.environ.get('LABEL_SELECTOR', 'AUTOBACKUP')
-        keep_last_default = int(os.environ.get('KEEP_LAST', 3))
+        api_token = os.environ.get("API_TOKEN")
+        snapshot_name = os.environ.get("SNAPSHOT_NAME", "%name%-%timestamp%")
+        label_selector = os.environ.get("LABEL_SELECTOR", "AUTOBACKUP")
+        keep_last_default = int(os.environ.get("KEEP_LAST", 3))
 
         notifier = NotificationManager()
 
-        notification_type = os.environ.get('NOTIFICATION_TYPE', '')
+        notification_type = os.environ.get("NOTIFICATION_TYPE", "")
 
         setup_notifications(
             notification_type,
             notifier,
             ntfy_config={
-                "bin": os.environ.get('NTFY_BIN', "/usr/bin/ntfy-send"),
-                "topic": os.environ.get('NTFY_TOPIC', 'DEFAULT')
+                "bin": os.environ.get("NTFY_BIN", "/usr/bin/ntfy-send"),
+                "topic": os.environ.get("NTFY_TOPIC", "DEFAULT"),
             },
             smtp_config={
-                "host": os.environ.get('SMTP_HOST'),
-                "port": int(os.environ.get('SMTP_PORT', 587)),
-                "user": os.environ.get('SMTP_USER'),
-                "password": os.environ.get('SMTP_PASS'),
-                "sender": os.environ.get('SMTP_FROM'),
-                "receiver": os.environ.get('SMTP_TO'),
-                "tls": str(os.environ.get('SMTP_TLS', 'true')).lower() == "true"
-            }
+                "host": os.environ.get("SMTP_HOST"),
+                "port": int(os.environ.get("SMTP_PORT", 587)),
+                "user": os.environ.get("SMTP_USER"),
+                "password": os.environ.get("SMTP_PASS"),
+                "sender": os.environ.get("SMTP_FROM"),
+                "receiver": os.environ.get("SMTP_TO"),
+                "tls": str(os.environ.get("SMTP_TLS", "true")).lower() == "true",
+            },
         )
 
         send_startup_notification()
 
-        cron_string = os.environ.get('CRON', '0 1 * * *')
+        cron_string = os.environ.get("CRON", "0 1 * * *")
 
-        if cron_string is False or cron_string.lower() == 'false':
+        if cron_string is False or cron_string.lower() == "false":
             run()
             sys.exit(exit_code)
 
@@ -287,34 +299,36 @@ if __name__ == '__main__':
                 time.sleep(1)
 
     else:
-        with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), "config.json"), "r") as config_file:
+        with open(
+            os.path.join(os.path.abspath(os.path.dirname(__file__)), "config.json"), "r"
+        ) as config_file:
             config = json.load(config_file)
 
-        api_token = config['api-token']
-        snapshot_name = config['snapshot-name']
-        label_selector = config['label-selector']
-        keep_last_default = int(config['keep-last'])
+        api_token = config["api-token"]
+        snapshot_name = config["snapshot-name"]
+        label_selector = config["label-selector"]
+        keep_last_default = int(config["keep-last"])
 
         notifier = NotificationManager()
 
-        notification_type = config.get('notification-type', '')
+        notification_type = config.get("notification-type", "")
 
         setup_notifications(
             notification_type,
             notifier,
             ntfy_config={
-                "bin": config.get('ntfy-bin', "/usr/bin/ntfy-send"),
-                "topic": config.get('ntfy-topic', 'DEFAULT')
+                "bin": config.get("ntfy-bin", "/usr/bin/ntfy-send"),
+                "topic": config.get("ntfy-topic", "DEFAULT"),
             },
             smtp_config={
-                "host": config.get('smtp-host'),
-                "port": config.get('smtp-port', 587),
-                "user": config.get('smtp-user'),
-                "password": config.get('smtp-pass'),
-                "sender": config.get('smtp-from'),
-                "receiver": config.get('smtp-to'),
-                "tls": config.get('smtp-tls', True)
-            }
+                "host": config.get("smtp-host"),
+                "port": config.get("smtp-port", 587),
+                "user": config.get("smtp-user"),
+                "password": config.get("smtp-pass"),
+                "sender": config.get("smtp-from"),
+                "receiver": config.get("smtp-to"),
+                "tls": config.get("smtp-tls", True),
+            },
         )
 
         send_startup_notification()
