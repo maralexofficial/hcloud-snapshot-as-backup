@@ -4,7 +4,7 @@ import subprocess
 
 
 class NtfyProvider:
-    def __init__(self, enabled=True, bin_path=None):
+    def __init__(self, enabled=True, bin_path=None, topic=None):
         self._enabled = enabled
 
         fallback = "/usr/bin/ntfy-send"
@@ -17,18 +17,19 @@ class NtfyProvider:
             bin_path = fallback
 
         if not self._is_valid_bin(bin_path):
-            print(f"[ntfy] WARNING: ntfy-send not found at {bin_path}")
+            print(f"[ntfy] WARNING: ntfy binary not found -> disabling")
             self._enabled = False
 
         self.bin_path = bin_path
 
-        self.topic = "DEFAULT"
+        self.topic = topic or os.environ.get("NTFY_TOPIC", "DEFAULT")
+
         self.title = None
         self.priority = None
         self.tags = None
 
     def _is_valid_bin(self, path):
-        return bool(shutil.which(path) or os.path.isfile(path))
+        return shutil.which(path) is not None
 
     def is_enabled(self):
         return self._enabled
@@ -43,18 +44,16 @@ class NtfyProvider:
             if self.topic:
                 cmd.append(self.topic)
 
-            if title:
-                cmd.append(title)
-            elif self.title:
-                cmd.append(self.title)
-
-            cmd.append(message)
+            if title or self.title:
+                cmd.append(f"--title={title or self.title}")
 
             if self.priority:
-                cmd.append(f"--prio={self.priority}")
+                cmd.append(f"--priority={self.priority}")
 
             if self.tags:
                 cmd.append(f"--tags={self.tags}")
+
+            cmd.append(message)
 
             subprocess.run(cmd, check=False)
 
