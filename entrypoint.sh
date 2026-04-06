@@ -1,8 +1,8 @@
 #!/bin/sh
 
-ENV_FILE="/etc/ntfy-send/.env"
+ENV_FILE="${NTFY_ENV_FILE:-/app/.ntfy.env}"
 
-mkdir -p /etc/ntfy-send
+mkdir -p "$(dirname "$ENV_FILE")"
 
 cat >"$ENV_FILE" <<EOF
 USER=${NTFY_USER}
