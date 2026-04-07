@@ -4,6 +4,7 @@
 * [About this repo](#about-this-repo)
 * [Quick Overview](#quick-overview)
 * [Installation](#installation)
+* [Usage](#usage)
 * [Authors](#authors)
 * [License](#license)
 
@@ -66,6 +67,7 @@ SMTP_TLS=true
 # Installation
 
 ### Docker image
+
 Usecase with ntfy
 ```
 docker run -d \
@@ -96,6 +98,9 @@ docker run -d \
 
 ### Docker build
 soon
+
+# Usage
+--
 
 # Authors
 
