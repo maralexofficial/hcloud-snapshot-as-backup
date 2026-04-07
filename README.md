@@ -2,8 +2,8 @@
 
 * [Preface](#preface)
 * [About this repo](#about-this-repo)
-* [Installation](#installation)
 * [Quick Overview](#quick-overview)
+* [Installation](#installation)
 * [Authors](#authors)
 * [License](#license)
 
@@ -33,6 +33,35 @@ The system is designed in a modular way, making it easy to extend or adapt to ad
 * ✅ Clear success and error reporting after each run
 * ⚙️ Configurable via environment variables
 * 🔄 Asynchronous sending to avoid blocking the main process
+
+# Quick Overview
+The notification system is configured entirely via environment variables:
+
+### Enable Notifications
+```
+NOTIFICATION_TYPE=ntfy,smtp
+```
+You can enable one or multiple providers by separating them with a comma.
+
+### NTFY configuration
+```
+NTFY_USER=dein_user
+NTFY_PASSWORD=dein_passwort
+NTFY_SERVER=https://example.tld
+NTFY_TOPIC=hades-notifications
+NTFY_ENV_FILE=/app/.ntfy.env
+```
+
+### SMTP configuration
+```
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=your-user
+SMTP_PASS=your-password
+SMTP_FROM=sender@example.com
+SMTP_TO=receiver@example.com
+SMTP_TLS=true
+```
 
 # Installation
 
@@ -67,35 +96,6 @@ docker run -d \
 
 ### Docker build
 soon
-
-# Quick Overview
-The notification system is configured entirely via environment variables:
-
-### Enable Notifications
-```
-NOTIFICATION_TYPE=ntfy,smtp
-```
-You can enable one or multiple providers by separating them with a comma.
-
-### NTFY configuration
-```
-NTFY_USER=dein_user
-NTFY_PASSWORD=dein_passwort
-NTFY_SERVER=https://example.tld
-NTFY_TOPIC=hades-notifications
-NTFY_ENV_FILE=/app/.ntfy.env
-```
-
-### SMTP configuration
-```
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_USER=your-user
-SMTP_PASS=your-password
-SMTP_FROM=sender@example.com
-SMTP_TO=receiver@example.com
-SMTP_TLS=true
-```
 
 # Authors
 
