@@ -99,8 +99,8 @@ soon
 
 # Authors
 
-* [fbrettnich](https://github.com/fbrettnich/hcloud-snapshot-as-backup) (Original author)
-* [maralexofficial](https://github.com/maralexofficial) (Fork author)
+* [fbrettnich](https://github.com/fbrettnich/hcloud-snapshot-as-backup)
+* [maralexofficial](https://github.com/maralexofficial)
 
 # License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
